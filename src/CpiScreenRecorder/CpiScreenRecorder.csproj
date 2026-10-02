@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>CPI.ScreenRecorder</AssemblyName>
+    <RootNamespace>CpiScreenRecorder</RootNamespace>
+    <Version>0.1.0</Version>
+    <Authors>CUTTING POINT INNOVATION CO., LTD.</Authors>
+    <Company>CUTTING POINT INNOVATION CO., LTD.</Company>
+    <Product>CPI Screen Recorder</Product>
+    <Description>High-fidelity Windows screen recorder for CPI product demos and user guides.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ScreenRecorderLib" Version="7.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\logo.png" />
+  </ItemGroup>
+</Project>
