@@ -172,7 +172,7 @@ public sealed class RecordingService : IDisposable
 
         var source = new DisplayRecordingSource(request.DisplayDeviceName)
         {
-            RecorderApi = RecorderApi.WindowsGraphicsCapture,
+            RecorderApi = RecorderApi.DesktopDuplication,
             IsBorderRequired = false,
             IsCursorCaptureEnabled = request.ShowCursor,
             Stretch = StretchMode.None
