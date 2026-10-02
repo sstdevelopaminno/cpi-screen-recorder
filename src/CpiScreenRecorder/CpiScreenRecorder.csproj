@@ -8,7 +8,6 @@
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>CPI.ScreenRecorder</AssemblyName>
     <RootNamespace>CpiScreenRecorder</RootNamespace>
