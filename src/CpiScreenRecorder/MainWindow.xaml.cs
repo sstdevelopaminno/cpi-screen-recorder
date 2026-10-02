@@ -9,6 +9,7 @@ using CpiScreenRecorder.Models;
 using CpiScreenRecorder.Services;
 using Microsoft.Win32;
 using ScreenRecorderLib;
+using System.IO;
 
 namespace CpiScreenRecorder;
 
