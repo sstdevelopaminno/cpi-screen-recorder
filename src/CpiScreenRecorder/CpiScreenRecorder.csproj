@@ -13,7 +13,7 @@
     <ApplicationIcon>Resources\AppIcon.ico</ApplicationIcon>
     <AssemblyName>CPI.ScreenRecorder</AssemblyName>
     <RootNamespace>CpiScreenRecorder</RootNamespace>
-    <Version>0.2.1</Version>
+    <Version>0.2.2</Version>
     <Authors>CUTTING POINT INNOVATION CO., LTD.</Authors>
     <Company>CUTTING POINT INNOVATION CO., LTD.</Company>
     <Product>CPI Screen Recorder</Product>
