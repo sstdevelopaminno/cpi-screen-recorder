@@ -39,6 +39,7 @@ public partial class MainWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        FitWindowToWorkArea();
         _loading = true;
 
         _settings = _settingsService.Load();
@@ -70,6 +71,7 @@ public partial class MainWindow : Window
         UpdateRegionLabel();
         UpdateAudioControls();
         UpdateStartAvailability();
+        UpdateWindowStateButton();
         SetStatus("พร้อมบันทึก", "#38D996");
     }
 
@@ -735,8 +737,53 @@ public partial class MainWindow : Window
         }
     }
 
+    private void FitWindowToWorkArea()
+    {
+        var workArea = SystemParameters.WorkArea;
+        const double edgeGap = 12;
+
+        if (workArea.Width < MinWidth + edgeGap)
+            MinWidth = Math.Max(720, workArea.Width - edgeGap);
+
+        if (workArea.Height < MinHeight + edgeGap)
+            MinHeight = Math.Max(460, workArea.Height - edgeGap);
+
+        Width = Math.Min(Width, Math.Max(MinWidth, workArea.Width - edgeGap));
+        Height = Math.Min(Height, Math.Max(MinHeight, workArea.Height - edgeGap));
+
+        Left = workArea.Left + Math.Max(0, (workArea.Width - Width) / 2);
+        Top = workArea.Top + Math.Max(0, (workArea.Height - Height) / 2);
+    }
+
+    private void Window_StateChanged(object? sender, EventArgs e)
+        => UpdateWindowStateButton();
+
+    private void UpdateWindowStateButton()
+    {
+        if (MaximizeButton is null)
+            return;
+
+        if (WindowState == WindowState.Maximized)
+        {
+            MaximizeButton.Content = "❐";
+            MaximizeButton.ToolTip = "คืนขนาดหน้าต่าง";
+        }
+        else
+        {
+            MaximizeButton.Content = "□";
+            MaximizeButton.ToolTip = "ขยายเต็มจอ";
+        }
+    }
+
     private void Minimize_Click(object sender, RoutedEventArgs e)
         => WindowState = WindowState.Minimized;
+
+    private void MaximizeRestore_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+    }
 
     private void Close_Click(object sender, RoutedEventArgs e)
         => Close();
