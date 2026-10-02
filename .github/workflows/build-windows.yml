@@ -53,13 +53,13 @@ jobs:
       - name: Upload portable build
         uses: actions/upload-artifact@v4
         with:
-          name: CPI-Screen-Recorder-v0.1-portable
+          name: CPI-Screen-Recorder-v0.2-portable
           path: artifacts/publish/
           if-no-files-found: error
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: CPI-Screen-Recorder-v0.1-Setup
+          name: CPI-Screen-Recorder-v0.2-Setup
           path: artifacts/installer/CPI-Screen-Recorder-Setup.exe
           if-no-files-found: error
