@@ -4,7 +4,11 @@ public sealed class RecordingRequest
 {
     public CaptureMode CaptureMode { get; init; } = CaptureMode.Display;
     public string? DisplayDeviceName { get; init; }
+
     public IntPtr WindowHandle { get; init; }
+    public string? WindowTitle { get; init; }
+    public int? WindowProcessId { get; init; }
+
     public CaptureRegion? Region { get; init; }
 
     public string OutputFile { get; init; } = string.Empty;
