@@ -29,13 +29,13 @@ public sealed class GlobalHotkeyService : IDisposable
             handle,
             StartStopHotkeyId,
             ModNoRepeat,
-            (uint)System.Windows.Forms.Keys.F8);
+            0x77);
 
         var pauseOk = RegisterHotKey(
             handle,
             PauseResumeHotkeyId,
             ModNoRepeat,
-            (uint)System.Windows.Forms.Keys.F9);
+            0x78);
 
         return startOk && pauseOk;
     }
