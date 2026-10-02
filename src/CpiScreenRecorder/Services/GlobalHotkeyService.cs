@@ -37,7 +37,11 @@ public sealed class GlobalHotkeyService : IDisposable
             ModNoRepeat,
             0x78);
 
-        return startOk && pauseOk;
+        if (startOk && pauseOk)
+            return true;
+
+        Unregister();
+        return false;
     }
 
     public void Unregister()
