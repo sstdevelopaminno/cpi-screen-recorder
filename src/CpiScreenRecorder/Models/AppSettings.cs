@@ -29,6 +29,13 @@ public sealed class AppSettings
     public string? SystemAudioDeviceName { get; set; }
     public int SystemAudioVolume { get; set; } = 100;
 
+    public bool EnableGlobalHotkeys { get; set; } = true;
+
+    public bool WebcamEnabled { get; set; }
+    public string? WebcamDeviceName { get; set; }
+    public WebcamPosition WebcamPosition { get; set; } = WebcamPosition.BottomRight;
+    public WebcamSizePreset WebcamSize { get; set; } = WebcamSizePreset.Medium;
+
     public double WindowWidth { get; set; } = 1120;
     public double WindowHeight { get; set; } = 700;
     public bool WindowMaximized { get; set; }
