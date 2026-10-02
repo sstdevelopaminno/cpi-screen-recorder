@@ -443,6 +443,8 @@ public partial class MainWindow : Window
                 CaptureMode = mode,
                 DisplayDeviceName = display?.DeviceName,
                 WindowHandle = window?.Handle ?? IntPtr.Zero,
+                WindowTitle = window?.Title,
+                WindowProcessId = window?.ProcessId,
                 Region = mode == RecorderCaptureMode.Region ? _selectedRegion : null,
                 OutputFile = outputFile,
                 FrameRate = SelectedFrameRate(),
@@ -526,16 +528,33 @@ public partial class MainWindow : Window
             MessageBoxImage.Information);
     }
 
-    private void StopRecording_Click(object sender, RoutedEventArgs e)
+    private async void StopRecording_Click(object sender, RoutedEventArgs e)
     {
         StopButton.IsEnabled = false;
-        SetStatus("กำลังปิดไฟล์ MP4...", "#F6C453");
-        _recordingService.Stop();
+        StartButton.IsEnabled = false;
+        SetStatus("กำลังหยุดและปิดไฟล์ MP4...", "#F6C453");
+
+        var stoppedCleanly = await _recordingService.StopAsync(
+            TimeSpan.FromSeconds(10));
+
+        if (!stoppedCleanly)
+        {
+            _timer.Stop();
+            SetRecordingUi(false);
+            SetStatus("รีเซ็ตตัวบันทึกแล้ว", "#F6C453");
+
+            MessageBox.Show(
+                this,
+                "ตัวบันทึกใช้เวลาปิดนานเกินไป ระบบได้รีเซ็ต capture session แล้ว\n\nสามารถเริ่มบันทึกใหม่ได้โดยไม่ต้องปิดโปรแกรม",
+                "CPI Screen Recorder",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
     }
 
     private void RecordingService_StatusChanged(object? sender, RecorderStatus status)
     {
-        Dispatcher.Invoke(() =>
+        Dispatcher.BeginInvoke(() =>
         {
             if (status == RecorderStatus.Recording)
                 SetStatus("กำลังบันทึก", "#FF4D6D");
@@ -546,7 +565,7 @@ public partial class MainWindow : Window
 
     private void RecordingService_RecordingCompleted(object? sender, string filePath)
     {
-        Dispatcher.Invoke(() =>
+        Dispatcher.BeginInvoke(() =>
         {
             _timer.Stop();
             SetRecordingUi(false);
@@ -565,7 +584,7 @@ public partial class MainWindow : Window
 
     private void RecordingService_RecordingFailed(object? sender, string error)
     {
-        Dispatcher.Invoke(() =>
+        Dispatcher.BeginInvoke(() =>
         {
             _timer.Stop();
             SetRecordingUi(false);
@@ -601,7 +620,7 @@ public partial class MainWindow : Window
 
     private void UpdateStartAvailability()
     {
-        if (_recordingService.IsRecording)
+        if (_recordingService.IsBusy)
         {
             StartButton.IsEnabled = false;
             return;
@@ -795,11 +814,11 @@ public partial class MainWindow : Window
         if (_allowClose)
             return;
 
-        if (_recordingService.IsRecording)
+        if (_recordingService.IsBusy)
         {
             var result = MessageBox.Show(
                 this,
-                "กำลังบันทึกหน้าจออยู่ ต้องการหยุดและปิดโปรแกรมหรือไม่?",
+                "กำลังบันทึกหรือกำลังปิดไฟล์อยู่ ต้องการหยุดและปิดโปรแกรมหรือไม่?",
                 "CPI Screen Recorder",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -810,17 +829,27 @@ public partial class MainWindow : Window
                 return;
             }
 
-            try
-            {
-                _recordingService.Stop();
-            }
-            catch
-            {
-            }
+            e.Cancel = true;
+            _ = StopAndCloseAsync();
+            return;
         }
 
         _allowClose = true;
         _timer.Stop();
         _recordingService.Dispose();
+    }
+
+    private async Task StopAndCloseAsync()
+    {
+        SetStatus("กำลังหยุดและปิดไฟล์ MP4...", "#F6C453");
+
+        await _recordingService.StopAsync(TimeSpan.FromSeconds(8));
+
+        _timer.Stop();
+        _recordingService.Dispose();
+
+        _allowClose = true;
+
+        await Dispatcher.InvokeAsync(Close);
     }
 }
