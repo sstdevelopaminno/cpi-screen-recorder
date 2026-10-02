@@ -1,5 +1,5 @@
 #define MyAppName "CPI Screen Recorder"
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.2.1"
 #define MyAppPublisher "CUTTING POINT INNOVATION CO., LTD."
 #define MyAppExeName "CPI.ScreenRecorder.exe"
 
@@ -14,6 +14,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=..\artifacts\installer
 OutputBaseFilename=CPI-Screen-Recorder-Setup
+SetupIconFile=..\src\CpiScreenRecorder\Resources\app.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2
 SolidCompression=yes
@@ -25,8 +26,8 @@ ArchitecturesInstallIn64BitMode=x64compatible
 Source: "..\artifacts\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"; IconIndex: 0
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"; IconIndex: 0; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "สร้างไอคอนบน Desktop"; GroupDescription: "ตัวเลือกเพิ่มเติม:"; Flags: unchecked
