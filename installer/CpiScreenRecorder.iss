@@ -1,5 +1,5 @@
 #define MyAppName "CPI Screen Recorder"
-#define MyAppVersion "0.2.2"
+#define MyAppVersion "0.3.0"
 #define MyAppPublisher "CUTTING POINT INNOVATION CO., LTD."
 #define MyAppExeName "CPI.ScreenRecorder.exe"
 
