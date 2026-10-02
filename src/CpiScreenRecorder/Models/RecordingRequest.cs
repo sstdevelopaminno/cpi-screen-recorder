@@ -23,4 +23,9 @@ public sealed class RecordingRequest
     public bool RecordSystemAudio { get; init; }
     public string? SystemAudioDeviceName { get; init; }
     public int SystemAudioVolume { get; init; } = 100;
+
+    public bool WebcamEnabled { get; init; }
+    public string? WebcamDeviceName { get; init; }
+    public WebcamPosition WebcamPosition { get; init; } = WebcamPosition.BottomRight;
+    public WebcamSizePreset WebcamSize { get; init; } = WebcamSizePreset.Medium;
 }
