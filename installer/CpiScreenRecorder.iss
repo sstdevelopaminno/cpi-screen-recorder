@@ -14,7 +14,6 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=..\artifacts\installer
 OutputBaseFilename=CPI-Screen-Recorder-Setup
-SetupIconFile=..\src\CpiScreenRecorder\Resources\app.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2
 SolidCompression=yes
