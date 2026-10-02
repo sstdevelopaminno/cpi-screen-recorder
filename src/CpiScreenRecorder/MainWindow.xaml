@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="CPI Screen Recorder"
-        Width="1080" Height="720"
-        MinWidth="980" MinHeight="660"
+        Width="1180" Height="820"
+        MinWidth="1020" MinHeight="700"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="CanResizeWithGrip"
@@ -65,7 +65,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Root" Background="{TemplateBinding Background}"
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="11">
@@ -127,6 +128,45 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="CaptureModeRadio" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#D9E7FB"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Height" Value="62"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="ModeBorder"
+                                Background="#0D1726"
+                                BorderBrush="#2A4162"
+                                BorderThickness="1"
+                                CornerRadius="13"
+                                Padding="14,10">
+                            <ContentPresenter VerticalAlignment="Center"
+                                              HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ModeBorder" Property="Background" Value="#14243A"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ModeBorder" Property="Background" Value="#102B4C"/>
+                                <Setter TargetName="ModeBorder" Property="BorderBrush" Value="#219CFF"/>
+                                <Setter TargetName="ModeBorder" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ModeBorder" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Slider">
+            <Setter Property="Foreground" Value="#2CC7F5"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
     </Window.Resources>
 
     <Border BorderBrush="#263A57" BorderThickness="1" Background="#08111F">
@@ -176,7 +216,7 @@
 
                         <StackPanel Grid.Row="1" Margin="0,22,0,0">
                             <TextBlock Text="บันทึกหน้าจอ" FontSize="28" FontWeight="Bold" Foreground="#F7FAFF"/>
-                            <TextBlock Text="สำหรับรีวิวระบบ คู่มือ และวิดีโอสาธิตของบริษัท"
+                            <TextBlock Text="รีวิวระบบ คู่มือ วิดีโอสาธิต พร้อมเสียงไมค์และเสียงจากคอม"
                                        Margin="0,9,0,0" TextWrapping="Wrap" LineHeight="21"
                                        Foreground="#94A7C2" FontSize="13"/>
                         </StackPanel>
@@ -192,13 +232,18 @@
                                                FontSize="34" FontWeight="SemiBold" Foreground="#F7FAFF"/>
                                     <TextBlock Text="High-fidelity SDR · H.264 High"
                                                Margin="0,8,0,0" Foreground="#6F8FB7" FontSize="11"/>
+                                    <TextBlock x:Name="AudioSummaryText"
+                                               Text="เสียง: ปิด"
+                                               Margin="0,5,0,0" Foreground="#6F8FB7" FontSize="11"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Margin="0,14,0,0" Background="#0B1A2D" CornerRadius="14" Padding="14" BorderBrush="#17385D" BorderThickness="1">
+                            <Border Margin="0,14,0,0" Background="#0B1A2D" CornerRadius="14" Padding="14"
+                                    BorderBrush="#17385D" BorderThickness="1">
                                 <StackPanel>
-                                    <TextBlock Text="COLOR SAFE" Foreground="#29C3F2" FontWeight="Bold" FontSize="10"/>
-                                    <TextBlock Margin="0,7,0,0" Text="ตั้งค่าเริ่มต้นเน้นความคมชัดและสี UI สำหรับการทำคู่มือ โดยไม่ย่อความละเอียดของจอ"
+                                    <TextBlock Text="CAPTURE MODES" Foreground="#29C3F2" FontWeight="Bold" FontSize="10"/>
+                                    <TextBlock Margin="0,7,0,0"
+                                               Text="เต็มจอ · เฉพาะหน้าต่าง · เลือกพื้นที่เอง รองรับคอมหลายจอ"
                                                Foreground="#8FA6C5" FontSize="11" TextWrapping="Wrap" LineHeight="18"/>
                                 </StackPanel>
                             </Border>
@@ -219,25 +264,115 @@
                 </Border>
 
                 <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="32,28,32,28" MaxWidth="700">
+                    <StackPanel Margin="32,28,32,28" MaxWidth="780">
                         <TextBlock Text="ตั้งค่าการบันทึก" Foreground="#F7FAFF" FontSize="22" FontWeight="Bold"/>
-                        <TextBlock Text="เลือกหน้าจอและเริ่มบันทึกได้ทันที ไฟล์จะถูกบันทึกเป็น MP4"
+                        <TextBlock Text="เลือกว่าจะบันทึกเต็มจอ เฉพาะโปรแกรม หรือกำหนดกรอบเอง พร้อมตั้งค่าเสียงก่อนเริ่ม"
                                    Foreground="#8499B7" FontSize="12" Margin="0,6,0,22"/>
 
-                        <Border Style="{StaticResource PanelCard}">
+                        <Border x:Name="ModePanel" Style="{StaticResource PanelCard}">
                             <StackPanel>
-                                <DockPanel LastChildFill="True">
-                                    <TextBlock Text="หน้าจอที่ต้องการบันทึก" Foreground="#E5EEFA" FontWeight="SemiBold" FontSize="13"/>
-                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Height="30" Padding="11,0"
-                                            Content="รีเฟรช" Click="RefreshDisplays_Click"/>
-                                </DockPanel>
-                                <ComboBox x:Name="DisplayCombo" Style="{StaticResource FieldCombo}" Margin="0,12,0,0"
-                                          DisplayMemberPath="Label"/>
-                                <TextBlock Text="บันทึกตามความละเอียดจริงของจอที่เลือก" Foreground="#617A9C" FontSize="10" Margin="2,8,0,0"/>
+                                <TextBlock Text="โหมดการบันทึก" Foreground="#E5EEFA" FontWeight="SemiBold" FontSize="13"/>
+                                <Grid Margin="0,12,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <RadioButton x:Name="ModeDisplayRadio" Grid.Column="0"
+                                                 Style="{StaticResource CaptureModeRadio}"
+                                                 GroupName="CaptureMode"
+                                                 Tag="Display"
+                                                 Checked="CaptureMode_Checked">
+                                        <StackPanel>
+                                            <TextBlock Text="เต็มจอ" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="เลือก Monitor" Foreground="#7F95B4" FontSize="10"
+                                                       Margin="0,4,0,0" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </RadioButton>
+
+                                    <RadioButton x:Name="ModeWindowRadio" Grid.Column="2"
+                                                 Style="{StaticResource CaptureModeRadio}"
+                                                 GroupName="CaptureMode"
+                                                 Tag="Window"
+                                                 Checked="CaptureMode_Checked">
+                                        <StackPanel>
+                                            <TextBlock Text="เฉพาะโปรแกรม" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="เลือก Window" Foreground="#7F95B4" FontSize="10"
+                                                       Margin="0,4,0,0" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </RadioButton>
+
+                                    <RadioButton x:Name="ModeRegionRadio" Grid.Column="4"
+                                                 Style="{StaticResource CaptureModeRadio}"
+                                                 GroupName="CaptureMode"
+                                                 Tag="Region"
+                                                 Checked="CaptureMode_Checked">
+                                        <StackPanel>
+                                            <TextBlock Text="เลือกพื้นที่" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="ลากกรอบเอง" Foreground="#7F95B4" FontSize="10"
+                                                       Margin="0,4,0,0" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                </Grid>
                             </StackPanel>
                         </Border>
 
-                        <Grid Margin="0,14,0,0">
+                        <Border x:Name="DisplayCard" Style="{StaticResource PanelCard}" Margin="0,14,0,0">
+                            <StackPanel>
+                                <DockPanel LastChildFill="True">
+                                    <TextBlock Text="หน้าจอ / Monitor" Foreground="#E5EEFA" FontWeight="SemiBold" FontSize="13"/>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
+                                            Height="30" Padding="11,0" Content="รีเฟรช"
+                                            Click="RefreshDisplays_Click"/>
+                                </DockPanel>
+                                <ComboBox x:Name="DisplayCombo" Style="{StaticResource FieldCombo}"
+                                          Margin="0,12,0,0" DisplayMemberPath="Label"/>
+                                <TextBlock Text="ถ้ามีหลายจอ รายการจะแสดง DISPLAY1 / DISPLAY2 พร้อมความละเอียดของแต่ละจอ"
+                                           Foreground="#617A9C" FontSize="10" Margin="2,8,0,0" TextWrapping="Wrap"/>
+
+                                <StackPanel x:Name="RegionControls" Margin="0,14,0,0" Visibility="Collapsed">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="12"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Height="42" CornerRadius="10"
+                                                Background="#0D1726" BorderBrush="#2A4162" BorderThickness="1">
+                                            <TextBlock x:Name="RegionLabel"
+                                                       Text="ยังไม่ได้เลือกพื้นที่"
+                                                       Foreground="#D9E7FB"
+                                                       VerticalAlignment="Center" Margin="12,0"/>
+                                        </Border>
+                                        <Button Grid.Column="2" Style="{StaticResource SecondaryButton}"
+                                                Content="ลากกรอบเลือกพื้นที่"
+                                                Click="SelectRegion_Click"/>
+                                    </Grid>
+                                    <TextBlock Text="หน้าจอจะมืดลงชั่วคราว แล้วลากกรอบครอบส่วนที่ต้องการบันทึก"
+                                               Foreground="#617A9C" FontSize="10" Margin="2,8,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="WindowCard" Style="{StaticResource PanelCard}" Margin="0,14,0,0" Visibility="Collapsed">
+                            <StackPanel>
+                                <DockPanel LastChildFill="True">
+                                    <TextBlock Text="หน้าต่างโปรแกรมที่ต้องการบันทึก" Foreground="#E5EEFA" FontWeight="SemiBold" FontSize="13"/>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
+                                            Height="30" Padding="11,0" Content="รีเฟรช"
+                                            Click="RefreshWindows_Click"/>
+                                </DockPanel>
+                                <ComboBox x:Name="WindowCombo" Style="{StaticResource FieldCombo}"
+                                          Margin="0,12,0,0" DisplayMemberPath="Label"/>
+                                <TextBlock Text="บันทึกเฉพาะหน้าต่างที่เลือก เช่น CpiPOS หรือ Browser โดยไม่ติด Desktop รอบข้าง"
+                                           Foreground="#617A9C" FontSize="10" Margin="2,8,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Grid x:Name="VideoOptionsPanel" Margin="0,14,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="14"/>
@@ -257,27 +392,110 @@
                             <Border Grid.Column="2" Style="{StaticResource PanelCard}">
                                 <StackPanel>
                                     <TextBlock Text="คุณภาพวิดีโอ" Foreground="#E5EEFA" FontWeight="SemiBold" FontSize="13"/>
-                                    <Border Margin="0,12,0,0" Height="42" CornerRadius="10" Background="#0D1726" BorderBrush="#2A4162" BorderThickness="1">
+                                    <Border Margin="0,12,0,0" Height="42" CornerRadius="10"
+                                            Background="#0D1726" BorderBrush="#2A4162" BorderThickness="1">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0">
                                             <Ellipse Width="8" Height="8" Fill="#2CC7F5"/>
-                                            <TextBlock Text="High Fidelity" Foreground="#F2F7FF" Margin="8,0,0,0" FontWeight="SemiBold"/>
+                                            <TextBlock Text="High Fidelity · H.264"
+                                                       Foreground="#F2F7FF" Margin="8,0,0,0" FontWeight="SemiBold"/>
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
                             </Border>
                         </Grid>
 
-                        <Border Style="{StaticResource PanelCard}" Margin="0,14,0,0">
+                        <Border x:Name="MousePanel" Style="{StaticResource PanelCard}" Margin="0,14,0,0">
                             <StackPanel>
                                 <TextBlock Text="เมาส์และไฮไลต์" Foreground="#E5EEFA" FontWeight="SemiBold" FontSize="13"/>
-                                <CheckBox x:Name="CursorCheck" Style="{StaticResource ToggleCheck}" Margin="0,15,0,0" IsChecked="True"
+                                <CheckBox x:Name="CursorCheck" Style="{StaticResource ToggleCheck}"
+                                          Margin="0,15,0,0" IsChecked="True"
                                           Content="แสดงตำแหน่งเมาส์ในวิดีโอ"/>
-                                <CheckBox x:Name="ClickHighlightCheck" Style="{StaticResource ToggleCheck}" Margin="0,13,0,0" IsChecked="True"
+                                <CheckBox x:Name="ClickHighlightCheck" Style="{StaticResource ToggleCheck}"
+                                          Margin="0,13,0,0" IsChecked="True"
                                           Content="ไฮไลต์ตำแหน่งเมื่อคลิก เพื่อทำคู่มือดูง่ายขึ้น"/>
                             </StackPanel>
                         </Border>
 
-                        <Border Style="{StaticResource PanelCard}" Margin="0,14,0,0">
+                        <Border x:Name="AudioPanel" Style="{StaticResource PanelCard}" Margin="0,14,0,0">
+                            <StackPanel>
+                                <DockPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="เสียง" Foreground="#E5EEFA" FontWeight="SemiBold" FontSize="13"/>
+                                        <TextBlock Text="เปิดไมค์และเสียงในคอมพร้อมกันได้ ระบบจะรวมลงไฟล์ MP4"
+                                                   Foreground="#617A9C" FontSize="10" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
+                                            Height="30" Padding="11,0" Content="รีเฟรชอุปกรณ์เสียง"
+                                            Click="RefreshAudio_Click"/>
+                                </DockPanel>
+
+                                <Border Margin="0,14,0,0" Background="#0C1726"
+                                        BorderBrush="#223A58" BorderThickness="1"
+                                        CornerRadius="12" Padding="14">
+                                    <StackPanel>
+                                        <CheckBox x:Name="MicrophoneCheck"
+                                                  Style="{StaticResource ToggleCheck}"
+                                                  Content="บันทึกเสียงไมโครโฟน"
+                                                  Checked="AudioOption_Changed"
+                                                  Unchecked="AudioOption_Changed"/>
+                                        <Grid x:Name="MicrophoneControls" Margin="0,12,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="2*"/>
+                                                <ColumnDefinition Width="14"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox x:Name="MicrophoneCombo"
+                                                      Grid.Column="0"
+                                                      Style="{StaticResource FieldCombo}"
+                                                      DisplayMemberPath="Label"/>
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                <TextBlock x:Name="MicrophoneVolumeText"
+                                                           Text="ระดับไมค์ 100%"
+                                                           Foreground="#9EB3CE" FontSize="10"/>
+                                                <Slider x:Name="MicrophoneVolumeSlider"
+                                                        Minimum="0" Maximum="100" Value="100"
+                                                        Margin="0,7,0,0"
+                                                        ValueChanged="MicrophoneVolumeSlider_ValueChanged"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Margin="0,10,0,0" Background="#0C1726"
+                                        BorderBrush="#223A58" BorderThickness="1"
+                                        CornerRadius="12" Padding="14">
+                                    <StackPanel>
+                                        <CheckBox x:Name="SystemAudioCheck"
+                                                  Style="{StaticResource ToggleCheck}"
+                                                  Content="บันทึกเสียงในคอมพิวเตอร์ (เพลง / Browser / โปรแกรม)"
+                                                  Checked="AudioOption_Changed"
+                                                  Unchecked="AudioOption_Changed"/>
+                                        <Grid x:Name="SystemAudioControls" Margin="0,12,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="2*"/>
+                                                <ColumnDefinition Width="14"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox x:Name="SystemAudioCombo"
+                                                      Grid.Column="0"
+                                                      Style="{StaticResource FieldCombo}"
+                                                      DisplayMemberPath="Label"/>
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                <TextBlock x:Name="SystemAudioVolumeText"
+                                                           Text="ระดับเสียงคอม 100%"
+                                                           Foreground="#9EB3CE" FontSize="10"/>
+                                                <Slider x:Name="SystemAudioVolumeSlider"
+                                                        Minimum="0" Maximum="100" Value="100"
+                                                        Margin="0,7,0,0"
+                                                        ValueChanged="SystemAudioVolumeSlider_ValueChanged"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="OutputPanel" Style="{StaticResource PanelCard}" Margin="0,14,0,0">
                             <StackPanel>
                                 <TextBlock Text="ตำแหน่งบันทึกไฟล์" Foreground="#E5EEFA" FontWeight="SemiBold" FontSize="13"/>
                                 <Grid Margin="0,12,0,0">
@@ -286,8 +504,10 @@
                                         <ColumnDefinition Width="10"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="OutputPathText" Grid.Column="0" Style="{StaticResource FieldText}" IsReadOnly="True"/>
-                                    <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="เลือกโฟลเดอร์" Click="BrowseOutput_Click"/>
+                                    <TextBox x:Name="OutputPathText" Grid.Column="0"
+                                             Style="{StaticResource FieldText}" IsReadOnly="True"/>
+                                    <Button Grid.Column="2" Style="{StaticResource SecondaryButton}"
+                                            Content="เลือกโฟลเดอร์" Click="BrowseOutput_Click"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -299,8 +519,10 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
-                            <Button x:Name="StartButton" Grid.Column="0" Height="58" Cursor="Hand" Foreground="White"
-                                    FontWeight="Bold" FontSize="15" Click="StartRecording_Click" BorderThickness="0">
+                            <Button x:Name="StartButton" Grid.Column="0" Height="58"
+                                    Cursor="Hand" Foreground="White"
+                                    FontWeight="Bold" FontSize="15"
+                                    Click="StartRecording_Click" BorderThickness="0">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
                                         <Border x:Name="Root" Background="{StaticResource BrandGradient}" CornerRadius="14">
@@ -309,8 +531,11 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
-                                                <Ellipse Width="13" Height="13" Fill="White" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                                <ContentPresenter Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <Ellipse Width="13" Height="13" Fill="White"
+                                                         Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                                <ContentPresenter Grid.Column="1"
+                                                                  HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"/>
                                             </Grid>
                                         </Border>
                                         <ControlTemplate.Triggers>
@@ -323,14 +548,18 @@
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
                                 </Button.Template>
-                                <TextBlock Text="เริ่มบันทึกหน้าจอ"/>
+                                <TextBlock Text="●  เริ่มบันทึก"/>
                             </Button>
 
-                            <Button x:Name="StopButton" Grid.Column="2" Style="{StaticResource SecondaryButton}" Height="58"
-                                    FontWeight="SemiBold" FontSize="14" Content="■  หยุดบันทึก" IsEnabled="False" Click="StopRecording_Click"/>
+                            <Button x:Name="StopButton" Grid.Column="2"
+                                    Style="{StaticResource SecondaryButton}" Height="58"
+                                    FontWeight="SemiBold" FontSize="14"
+                                    Content="■  หยุดบันทึก"
+                                    IsEnabled="False"
+                                    Click="StopRecording_Click"/>
                         </Grid>
 
-                        <TextBlock Text="CPI Screen Recorder v0.1 · บันทึกในเครื่องเท่านั้น · ไม่มีการอัปโหลดไฟล์ขึ้นอินเทอร์เน็ต"
+                        <TextBlock Text="CPI Screen Recorder v0.2 · ไฟล์อยู่ในเครื่องเท่านั้น · รองรับ Monitor / Window / Region / Microphone / System Audio"
                                    Foreground="#506A8D" FontSize="10" Margin="2,14,0,0"/>
                     </StackPanel>
                 </ScrollViewer>
