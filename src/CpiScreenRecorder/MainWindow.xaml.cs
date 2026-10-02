@@ -283,11 +283,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var screen = System.Windows.Forms.Screen.AllScreens
-            .FirstOrDefault(s => string.Equals(
-                s.DeviceName,
-                display.DeviceName,
-                StringComparison.OrdinalIgnoreCase));
+        var screen = MonitorInfoService.Find(display.DeviceName);
 
         if (screen is null)
         {
