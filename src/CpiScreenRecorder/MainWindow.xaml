@@ -329,7 +329,7 @@
                                             Click="RefreshDisplays_Click"/>
                                 </DockPanel>
                                 <ComboBox x:Name="DisplayCombo" Style="{StaticResource FieldCombo}"
-                                          Margin="0,12,0,0" DisplayMemberPath="Label"/>
+                                          Margin="0,12,0,0" DisplayMemberPath="Label" SelectionChanged="DisplayCombo_SelectionChanged"/>
                                 <TextBlock Text="ถ้ามีหลายจอ รายการจะแสดง DISPLAY1 / DISPLAY2 พร้อมความละเอียดของแต่ละจอ"
                                            Foreground="#617A9C" FontSize="10" Margin="2,8,0,0" TextWrapping="Wrap"/>
 
