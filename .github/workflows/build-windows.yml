@@ -26,7 +26,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore
-        run: dotnet restore src/CpiScreenRecorder/CpiScreenRecorder.csproj
+        run: dotnet restore src/CpiScreenRecorder/CpiScreenRecorder.csproj -p:Platform=x64
 
       - name: Publish self-contained Windows x64
         run: >-
@@ -34,6 +34,7 @@ jobs:
           -c Release
           -r win-x64
           --self-contained true
+          -p:Platform=x64
           -p:PublishSingleFile=false
           -p:DebugType=None
           -p:DebugSymbols=false
