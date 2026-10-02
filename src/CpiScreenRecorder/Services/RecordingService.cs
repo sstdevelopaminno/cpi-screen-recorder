@@ -6,14 +6,39 @@ namespace CpiScreenRecorder.Services;
 
 public sealed class RecordingService : IDisposable
 {
+    private readonly object _sync = new();
+
     private Recorder? _recorder;
     private string? _currentFile;
+    private TaskCompletionSource<bool>? _recordingFinished;
+    private bool _isStopping;
 
     public event EventHandler<string>? RecordingCompleted;
     public event EventHandler<string>? RecordingFailed;
     public event EventHandler<RecorderStatus>? StatusChanged;
 
-    public bool IsRecording => _recorder?.Status is RecorderStatus.Recording or RecorderStatus.Paused;
+    public bool IsRecording
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _recorder?.Status is RecorderStatus.Recording or RecorderStatus.Paused;
+            }
+        }
+    }
+
+    public bool IsBusy
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _isStopping
+                       || _recorder?.Status is RecorderStatus.Recording or RecorderStatus.Paused;
+            }
+        }
+    }
 
     public IReadOnlyList<DisplayOption> GetDisplays()
     {
@@ -29,7 +54,11 @@ public sealed class RecordingService : IDisposable
 
             try
             {
-                var source = new DisplayRecordingSource(display.DeviceName);
+                var source = new DisplayRecordingSource(display.DeviceName)
+                {
+                    RecorderApi = RecorderApi.DesktopDuplication
+                };
+
                 var dimensions = Recorder.GetOutputDimensionsForRecordingSources(
                     new RecordingSourceBase[] { source });
 
@@ -53,8 +82,13 @@ public sealed class RecordingService : IDisposable
     public IReadOnlyList<WindowOption> GetWindows()
     {
         return Recorder.GetWindows()
-            .Where(w => w.IsValidWindow() && !string.IsNullOrWhiteSpace(w.Title))
-            .Select(w => new WindowOption(w.Title.Trim(), w.Handle, w.Pid.HasValue ? w.Pid.Value : null))
+            .Where(w => w.IsValidWindow()
+                        && !w.IsMinmimized()
+                        && !string.IsNullOrWhiteSpace(w.Title))
+            .Select(w => new WindowOption(
+                w.Title.Trim(),
+                w.Handle,
+                w.Pid.HasValue ? w.Pid.Value : null))
             .OrderBy(w => w.Title, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
     }
@@ -87,15 +121,19 @@ public sealed class RecordingService : IDisposable
 
     public void Start(RecordingRequest request)
     {
-        StopAndDisposeRecorder();
+        ReleaseIdleRecorder();
 
         if (string.IsNullOrWhiteSpace(request.OutputFile))
             throw new ArgumentException("Output file is required.", nameof(request));
 
+        if (IsBusy)
+            throw new InvalidOperationException(
+                "ตัวบันทึกกำลังทำงานหรือกำลังปิดไฟล์ กรุณารอสักครู่แล้วลองอีกครั้ง");
+
         Directory.CreateDirectory(Path.GetDirectoryName(request.OutputFile)!);
         _currentFile = request.OutputFile;
 
-        var videoSource = CreateVideoSource(request);
+        var videoSource = CreateAndValidateVideoSource(request);
         var outputOptions = CreateOutputOptions(request);
         var audioOptions = CreateAudioOptions(request);
 
@@ -110,9 +148,14 @@ public sealed class RecordingService : IDisposable
             {
                 Framerate = request.FrameRate,
                 IsFixedFramerate = true,
-                Quality = 94,
-                Bitrate = request.FrameRate >= 60 ? 42_000_000 : 28_000_000,
-                IsHardwareEncodingEnabled = true,
+                Quality = 92,
+                Bitrate = request.FrameRate >= 60 ? 36_000_000 : 24_000_000,
+
+                // Software encoding is intentionally used in the stability build.
+                // It avoids GPU/driver encoder conflicts that can leave a capture
+                // session stuck while finalizing on some Windows 10 PCs.
+                IsHardwareEncodingEnabled = false,
+
                 IsLowLatencyEnabled = false,
                 IsThrottlingDisabled = false,
                 IsMp4FastStartEnabled = true,
@@ -145,52 +188,197 @@ public sealed class RecordingService : IDisposable
             }
         };
 
-        _recorder = Recorder.CreateRecorder(options);
-        _recorder.OnRecordingComplete += Recorder_OnRecordingComplete;
-        _recorder.OnRecordingFailed += Recorder_OnRecordingFailed;
-        _recorder.OnStatusChanged += Recorder_OnStatusChanged;
-        _recorder.Record(request.OutputFile);
+        var recorder = Recorder.CreateRecorder(options);
+        recorder.OnRecordingComplete += Recorder_OnRecordingComplete;
+        recorder.OnRecordingFailed += Recorder_OnRecordingFailed;
+        recorder.OnStatusChanged += Recorder_OnStatusChanged;
+
+        lock (_sync)
+        {
+            _recorder = recorder;
+            _isStopping = false;
+            _recordingFinished = new TaskCompletionSource<bool>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        try
+        {
+            recorder.Record(request.OutputFile);
+        }
+        catch
+        {
+            ForceDetachRecorder(recorder);
+            throw;
+        }
     }
 
-    private static RecordingSourceBase CreateVideoSource(RecordingRequest request)
+    private RecordingSourceBase CreateAndValidateVideoSource(RecordingRequest request)
     {
-        if (request.CaptureMode == CaptureMode.Window)
+        RecordingSourceBase source = request.CaptureMode switch
         {
-            if (request.WindowHandle == IntPtr.Zero)
-                throw new InvalidOperationException("กรุณาเลือกหน้าต่างโปรแกรมที่ต้องการบันทึก");
+            CaptureMode.Window => CreateStableWindowSource(request),
+            CaptureMode.Display => CreateDisplaySource(request),
+            CaptureMode.Region => CreateRegionSource(request),
+            _ => throw new InvalidOperationException("ไม่รู้จักโหมดการบันทึกที่เลือก")
+        };
 
-            return new WindowRecordingSource(request.WindowHandle)
+        if (!IsSourceUsable(source))
+        {
+            throw new InvalidOperationException(
+                "ไม่สามารถเตรียมแหล่งภาพสำหรับบันทึกได้ กรุณากดรีเฟรชแล้วเลือกหน้าจอหรือโปรแกรมใหม่");
+        }
+
+        return source;
+    }
+
+    private RecordingSourceBase CreateStableWindowSource(RecordingRequest request)
+    {
+        var currentWindow = ResolveCurrentWindow(request);
+
+        if (currentWindow is null)
+        {
+            throw new InvalidOperationException(
+                "หน้าต่างโปรแกรมที่เลือกเปลี่ยนหรือปิดไปแล้ว กรุณากด “รีเฟรช” และเลือกโปรแกรมใหม่");
+        }
+
+        // Windows 11 handles isolated Window Graphics Capture reliably.
+        // Windows 10 can return a stale/unsupported HWND for some desktop apps.
+        // On Windows 10 we therefore capture the exact on-screen window rectangle
+        // from Desktop Duplication. This avoids the 'No valid recording sources'
+        // failure seen on the production test PC.
+        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+        {
+            var directWindow = new WindowRecordingSource(currentWindow)
             {
                 IsCursorCaptureEnabled = request.ShowCursor,
                 IsBorderRequired = false,
                 Stretch = StretchMode.None
             };
+
+            if (IsSourceUsable(directWindow))
+                return directWindow;
         }
 
+        if (!WindowCaptureInfoService.TryGetWindowCrop(
+                currentWindow.Handle,
+                out var crop)
+            || crop is null)
+        {
+            throw new InvalidOperationException(
+                "ไม่สามารถอ่านขอบเขตของหน้าต่างโปรแกรมนี้ได้ กรุณาเปิดหน้าต่างให้แสดงบนจอและอย่าย่อโปรแกรมก่อนเริ่มบันทึก");
+        }
+
+        return new DisplayRecordingSource(crop.DisplayDeviceName)
+        {
+            RecorderApi = RecorderApi.DesktopDuplication,
+            IsBorderRequired = false,
+            IsCursorCaptureEnabled = request.ShowCursor,
+            Stretch = StretchMode.None,
+            SourceRect = new ScreenRect(crop.X, crop.Y, crop.Width, crop.Height),
+            OutputSize = new ScreenSize(crop.Width, crop.Height)
+        };
+    }
+
+    private static RecordableWindow? ResolveCurrentWindow(RecordingRequest request)
+    {
+        var windows = Recorder.GetWindows()
+            .Where(w => w.IsValidWindow()
+                        && !w.IsMinmimized()
+                        && !string.IsNullOrWhiteSpace(w.Title))
+            .ToList();
+
+        var exactHandle = windows.FirstOrDefault(
+            w => request.WindowHandle != IntPtr.Zero
+                 && w.Handle == request.WindowHandle);
+
+        if (exactHandle is not null)
+            return exactHandle;
+
+        if (request.WindowProcessId.HasValue)
+        {
+            var sameProcessAndTitle = windows.FirstOrDefault(
+                w => w.Pid.HasValue
+                     && w.Pid.Value == request.WindowProcessId.Value
+                     && !string.IsNullOrWhiteSpace(request.WindowTitle)
+                     && string.Equals(
+                         w.Title?.Trim(),
+                         request.WindowTitle.Trim(),
+                         StringComparison.CurrentCultureIgnoreCase));
+
+            if (sameProcessAndTitle is not null)
+                return sameProcessAndTitle;
+
+            var sameProcess = windows.FirstOrDefault(
+                w => w.Pid.HasValue
+                     && w.Pid.Value == request.WindowProcessId.Value);
+
+            if (sameProcess is not null)
+                return sameProcess;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.WindowTitle))
+        {
+            return windows.FirstOrDefault(
+                w => string.Equals(
+                    w.Title?.Trim(),
+                    request.WindowTitle.Trim(),
+                    StringComparison.CurrentCultureIgnoreCase));
+        }
+
+        return null;
+    }
+
+    private static RecordingSourceBase CreateDisplaySource(RecordingRequest request)
+    {
         if (string.IsNullOrWhiteSpace(request.DisplayDeviceName))
             throw new InvalidOperationException("กรุณาเลือกหน้าจอที่ต้องการบันทึก");
 
-        var source = new DisplayRecordingSource(request.DisplayDeviceName)
+        return new DisplayRecordingSource(request.DisplayDeviceName)
         {
             RecorderApi = RecorderApi.DesktopDuplication,
             IsBorderRequired = false,
             IsCursorCaptureEnabled = request.ShowCursor,
             Stretch = StretchMode.None
         };
+    }
 
-        if (request.CaptureMode == CaptureMode.Region)
+    private static RecordingSourceBase CreateRegionSource(RecordingRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.DisplayDeviceName))
+            throw new InvalidOperationException("กรุณาเลือกหน้าจอที่ต้องการบันทึก");
+
+        var region = request.Region;
+        if (region is null || !region.IsValid)
+            throw new InvalidOperationException("กรุณาเลือกพื้นที่หน้าจอที่ต้องการบันทึก");
+
+        var width = MakeEven(region.Width);
+        var height = MakeEven(region.Height);
+
+        return new DisplayRecordingSource(request.DisplayDeviceName)
         {
-            var region = request.Region;
-            if (region is null || !region.IsValid)
-                throw new InvalidOperationException("กรุณาเลือกพื้นที่หน้าจอที่ต้องการบันทึก");
+            RecorderApi = RecorderApi.DesktopDuplication,
+            IsBorderRequired = false,
+            IsCursorCaptureEnabled = request.ShowCursor,
+            Stretch = StretchMode.None,
+            SourceRect = new ScreenRect(region.X, region.Y, width, height),
+            OutputSize = new ScreenSize(width, height)
+        };
+    }
 
-            var width = MakeEven(region.Width);
-            var height = MakeEven(region.Height);
-            source.SourceRect = new ScreenRect(region.X, region.Y, width, height);
-            source.OutputSize = new ScreenSize(width, height);
+    private static bool IsSourceUsable(RecordingSourceBase source)
+    {
+        try
+        {
+            var dimensions = Recorder.GetOutputDimensionsForRecordingSources(
+                new[] { source });
+
+            return dimensions.CombinedOutputSize.Width >= 32
+                   && dimensions.CombinedOutputSize.Height >= 32;
         }
-
-        return source;
+        catch
+        {
+            return false;
+        }
     }
 
     private static OutputOptions CreateOutputOptions(RecordingRequest request)
@@ -201,10 +389,12 @@ public sealed class RecordingService : IDisposable
             Stretch = StretchMode.None
         };
 
-        if (request.CaptureMode == CaptureMode.Region && request.Region is { IsValid: true } region)
+        if (request.CaptureMode == CaptureMode.Region
+            && request.Region is { IsValid: true } region)
         {
             var width = MakeEven(region.Width);
             var height = MakeEven(region.Height);
+
             output.SourceRect = new ScreenRect(0, 0, width, height);
             output.OutputFrameSize = new ScreenSize(width, height);
         }
@@ -216,7 +406,8 @@ public sealed class RecordingService : IDisposable
     {
         var sources = new List<AudioSourceBase>();
 
-        if (request.RecordMicrophone && !string.IsNullOrWhiteSpace(request.MicrophoneDeviceName))
+        if (request.RecordMicrophone
+            && !string.IsNullOrWhiteSpace(request.MicrophoneDeviceName))
         {
             sources.Add(new CaptureAudioSource(request.MicrophoneDeviceName)
             {
@@ -225,7 +416,8 @@ public sealed class RecordingService : IDisposable
             });
         }
 
-        if (request.RecordSystemAudio && !string.IsNullOrWhiteSpace(request.SystemAudioDeviceName))
+        if (request.RecordSystemAudio
+            && !string.IsNullOrWhiteSpace(request.SystemAudioDeviceName))
         {
             sources.Add(new LoopbackAudioSource(request.SystemAudioDeviceName)
             {
@@ -251,48 +443,226 @@ public sealed class RecordingService : IDisposable
         return value % 2 == 0 ? value : value - 1;
     }
 
-    public void Stop()
+    public async Task<bool> StopAsync(TimeSpan? timeout = null)
     {
-        if (_recorder is { Status: RecorderStatus.Recording or RecorderStatus.Paused })
-            _recorder.Stop();
+        Recorder? recorder;
+        TaskCompletionSource<bool>? finished;
+        var shouldRequestStop = false;
+
+        lock (_sync)
+        {
+            recorder = _recorder;
+            finished = _recordingFinished;
+
+            if (recorder is null)
+                return true;
+
+            if (recorder.Status == RecorderStatus.Idle)
+                return true;
+
+            if (!_isStopping)
+            {
+                _isStopping = true;
+                shouldRequestStop = true;
+            }
+        }
+
+        if (shouldRequestStop)
+        {
+            try
+            {
+                var stopTask = Task.Run(() => recorder.Stop());
+                await stopTask.WaitAsync(TimeSpan.FromSeconds(3));
+            }
+            catch (TimeoutException)
+            {
+                ForceDetachRecorder(recorder);
+                return false;
+            }
+            catch
+            {
+                ForceDetachRecorder(recorder);
+                return false;
+            }
+        }
+
+        if (finished is null)
+            return true;
+
+        var finalizeTimeout = timeout ?? TimeSpan.FromSeconds(10);
+        var completed = await Task.WhenAny(
+            finished.Task,
+            Task.Delay(finalizeTimeout));
+
+        if (completed != finished.Task)
+        {
+            ForceDetachRecorder(recorder);
+            return false;
+        }
+
+        return true;
     }
 
-    private void Recorder_OnRecordingComplete(object? sender, RecordingCompleteEventArgs e)
+    private void Recorder_OnRecordingComplete(
+        object? sender,
+        RecordingCompleteEventArgs e)
     {
-        RecordingCompleted?.Invoke(this, e.FilePath ?? _currentFile ?? string.Empty);
+        lock (_sync)
+        {
+            _isStopping = false;
+            _recordingFinished?.TrySetResult(true);
+        }
+
+        RecordingCompleted?.Invoke(
+            this,
+            e.FilePath ?? _currentFile ?? string.Empty);
     }
 
-    private void Recorder_OnRecordingFailed(object? sender, RecordingFailedEventArgs e)
+    private void Recorder_OnRecordingFailed(
+        object? sender,
+        RecordingFailedEventArgs e)
     {
-        var detail = string.IsNullOrWhiteSpace(e.Error) ? "ไม่สามารถบันทึกวิดีโอได้" : e.Error;
+        lock (_sync)
+        {
+            _isStopping = false;
+            _recordingFinished?.TrySetResult(true);
+        }
+
+        var detail = string.IsNullOrWhiteSpace(e.Error)
+            ? "ไม่สามารถบันทึกวิดีโอได้"
+            : e.Error;
+
         RecordingFailed?.Invoke(this, detail);
     }
 
-    private void Recorder_OnStatusChanged(object? sender, RecordingStatusEventArgs e)
+    private void Recorder_OnStatusChanged(
+        object? sender,
+        RecordingStatusEventArgs e)
     {
+        if (e.Status == RecorderStatus.Idle)
+        {
+            lock (_sync)
+            {
+                _isStopping = false;
+                _recordingFinished?.TrySetResult(true);
+            }
+        }
+
         StatusChanged?.Invoke(this, e.Status);
     }
 
-    private void StopAndDisposeRecorder()
+    private void ReleaseIdleRecorder()
     {
-        if (_recorder is null)
+        Recorder? oldRecorder = null;
+
+        lock (_sync)
+        {
+            if (_recorder is null)
+                return;
+
+            if (_recorder.Status is RecorderStatus.Recording or RecorderStatus.Paused
+                || _isStopping)
+            {
+                return;
+            }
+
+            oldRecorder = _recorder;
+            _recorder = null;
+            _recordingFinished = null;
+        }
+
+        if (oldRecorder is null)
             return;
+
+        DetachEvents(oldRecorder);
 
         try
         {
-            if (_recorder.Status is RecorderStatus.Recording or RecorderStatus.Paused)
-                _recorder.Stop();
+            oldRecorder.Dispose();
         }
         catch
         {
         }
-
-        _recorder.OnRecordingComplete -= Recorder_OnRecordingComplete;
-        _recorder.OnRecordingFailed -= Recorder_OnRecordingFailed;
-        _recorder.OnStatusChanged -= Recorder_OnStatusChanged;
-        _recorder.Dispose();
-        _recorder = null;
     }
 
-    public void Dispose() => StopAndDisposeRecorder();
+    private void ForceDetachRecorder(Recorder recorder)
+    {
+        lock (_sync)
+        {
+            if (ReferenceEquals(_recorder, recorder))
+            {
+                _recorder = null;
+                _isStopping = false;
+                _recordingFinished?.TrySetResult(false);
+                _recordingFinished = null;
+            }
+        }
+
+        DetachEvents(recorder);
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                recorder.Stop();
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                recorder.Dispose();
+            }
+            catch
+            {
+            }
+        });
+    }
+
+    private void DetachEvents(Recorder recorder)
+    {
+        recorder.OnRecordingComplete -= Recorder_OnRecordingComplete;
+        recorder.OnRecordingFailed -= Recorder_OnRecordingFailed;
+        recorder.OnStatusChanged -= Recorder_OnStatusChanged;
+    }
+
+    public void Dispose()
+    {
+        Recorder? recorder;
+
+        lock (_sync)
+        {
+            recorder = _recorder;
+            _recorder = null;
+            _isStopping = false;
+            _recordingFinished?.TrySetResult(false);
+            _recordingFinished = null;
+        }
+
+        if (recorder is null)
+            return;
+
+        DetachEvents(recorder);
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (recorder.Status is RecorderStatus.Recording or RecorderStatus.Paused)
+                    recorder.Stop();
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                recorder.Dispose();
+            }
+            catch
+            {
+            }
+        });
+    }
 }
