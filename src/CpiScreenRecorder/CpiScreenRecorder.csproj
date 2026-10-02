@@ -3,6 +3,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Platforms>x64</Platforms>
@@ -12,7 +13,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>CPI.ScreenRecorder</AssemblyName>
     <RootNamespace>CpiScreenRecorder</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>CUTTING POINT INNOVATION CO., LTD.</Authors>
     <Company>CUTTING POINT INNOVATION CO., LTD.</Company>
     <Product>CPI Screen Recorder</Product>
