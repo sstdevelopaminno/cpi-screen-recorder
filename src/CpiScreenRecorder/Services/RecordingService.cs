@@ -1,4 +1,5 @@
 using ScreenRecorderLib;
+using System.IO;
 
 namespace CpiScreenRecorder.Services;
 
