@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="CPI Screen Recorder"
-        Icon="Resources/app.ico"
+        Icon="Resources/AppIcon.ico"
         Width="1040" Height="680"
         MinWidth="820" MinHeight="560"
         WindowStartupLocation="CenterScreen"
@@ -13,8 +13,7 @@
         FontFamily="{StaticResource AppFont}"
         Loaded="Window_Loaded"
         StateChanged="Window_StateChanged"
-        Closing="Window_Closing"
-        StateChanged="Window_StateChanged">
+        Closing="Window_Closing">
 
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="0"
