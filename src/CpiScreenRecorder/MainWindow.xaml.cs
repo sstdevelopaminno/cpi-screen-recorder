@@ -43,7 +43,6 @@ public partial class MainWindow : Window
         _loading = true;
 
         _settings = _settingsService.Load();
-        ApplySavedWindowState();
         OutputPathText.Text = _settings.OutputDirectory;
 
         CursorCheck.IsChecked = _settings.ShowCursor;
@@ -732,7 +731,7 @@ public partial class MainWindow : Window
                 ? WindowState.Normal
                 : WindowState.Maximized;
 
-            UpdateMaximizeButtonGlyph();
+            UpdateWindowStateButton();
         }
         else
         {
@@ -820,7 +819,6 @@ public partial class MainWindow : Window
             }
         }
 
-        SaveWindowState();
         _allowClose = true;
         _timer.Stop();
         _recordingService.Dispose();
