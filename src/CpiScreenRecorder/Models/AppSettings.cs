@@ -28,4 +28,8 @@ public sealed class AppSettings
     public bool RecordSystemAudio { get; set; }
     public string? SystemAudioDeviceName { get; set; }
     public int SystemAudioVolume { get; set; } = 100;
+
+    public double WindowWidth { get; set; } = 1120;
+    public double WindowHeight { get; set; } = 700;
+    public bool WindowMaximized { get; set; }
 }
