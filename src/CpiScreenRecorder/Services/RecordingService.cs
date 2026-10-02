@@ -1,5 +1,6 @@
-using ScreenRecorderLib;
 using System.IO;
+using CpiScreenRecorder.Models;
+using ScreenRecorderLib;
 
 namespace CpiScreenRecorder.Services;
 
@@ -14,50 +15,103 @@ public sealed class RecordingService : IDisposable
 
     public bool IsRecording => _recorder?.Status is RecorderStatus.Recording or RecorderStatus.Paused;
 
-    public IReadOnlyList<(string FriendlyName, string DeviceName)> GetDisplays()
+    public IReadOnlyList<DisplayOption> GetDisplays()
     {
-        return Recorder.GetDisplays()
-            .Select(d => (d.FriendlyName ?? d.DeviceName, d.DeviceName))
-            .Where(d => !string.IsNullOrWhiteSpace(d.DeviceName))
+        var result = new List<DisplayOption>();
+
+        foreach (var display in Recorder.GetDisplays())
+        {
+            if (string.IsNullOrWhiteSpace(display.DeviceName))
+                continue;
+
+            var width = 0;
+            var height = 0;
+
+            try
+            {
+                var source = new DisplayRecordingSource(display.DeviceName);
+                var dimensions = Recorder.GetOutputDimensionsForRecordingSources(
+                    new RecordingSourceBase[] { source });
+
+                width = (int)Math.Round(dimensions.CombinedOutputSize.Width);
+                height = (int)Math.Round(dimensions.CombinedOutputSize.Height);
+            }
+            catch
+            {
+            }
+
+            result.Add(new DisplayOption(
+                display.FriendlyName ?? display.DeviceName,
+                display.DeviceName,
+                width,
+                height));
+        }
+
+        return result;
+    }
+
+    public IReadOnlyList<WindowOption> GetWindows()
+    {
+        return Recorder.GetWindows()
+            .Where(w => w.IsValidWindow() && !string.IsNullOrWhiteSpace(w.Title))
+            .Select(w => new WindowOption(w.Title.Trim(), w.Handle, w.Pid.HasValue ? w.Pid.Value : null))
+            .OrderBy(w => w.Title, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
     }
 
-    public void Start(
-        string deviceName,
-        string outputFile,
-        int frameRate,
-        bool showCursor,
-        bool highlightClicks)
+    public IReadOnlyList<AudioDeviceOption> GetMicrophones()
+    {
+        return Recorder.GetSystemAudioCaptureDevices()
+            .Where(d => !string.IsNullOrWhiteSpace(d.DeviceName))
+            .Select(d => new AudioDeviceOption(
+                d.FriendlyName ?? "Microphone",
+                d.DeviceName,
+                d.IsDefaultDevice))
+            .OrderByDescending(d => d.IsDefault)
+            .ThenBy(d => d.FriendlyName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    public IReadOnlyList<AudioDeviceOption> GetSystemAudioDevices()
+    {
+        return Recorder.GetSystemAudioLoopbackDevices()
+            .Where(d => !string.IsNullOrWhiteSpace(d.DeviceName))
+            .Select(d => new AudioDeviceOption(
+                d.FriendlyName ?? "System audio",
+                d.DeviceName,
+                d.IsDefaultDevice))
+            .OrderByDescending(d => d.IsDefault)
+            .ThenBy(d => d.FriendlyName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    public void Start(RecordingRequest request)
     {
         StopAndDisposeRecorder();
 
-        Directory.CreateDirectory(Path.GetDirectoryName(outputFile)!);
-        _currentFile = outputFile;
+        if (string.IsNullOrWhiteSpace(request.OutputFile))
+            throw new ArgumentException("Output file is required.", nameof(request));
 
-        var source = new DisplayRecordingSource(deviceName)
-        {
-            RecorderApi = RecorderApi.DesktopDuplication,
-            IsBorderRequired = false,
-            IsCursorCaptureEnabled = showCursor
-        };
+        Directory.CreateDirectory(Path.GetDirectoryName(request.OutputFile)!);
+        _currentFile = request.OutputFile;
+
+        var videoSource = CreateVideoSource(request);
+        var outputOptions = CreateOutputOptions(request);
+        var audioOptions = CreateAudioOptions(request);
 
         var options = new RecorderOptions
         {
             SourceOptions = new SourceOptions
             {
-                RecordingSources = new List<RecordingSourceBase> { source }
+                RecordingSources = new List<RecordingSourceBase> { videoSource }
             },
-            OutputOptions = new OutputOptions
-            {
-                RecorderMode = RecorderMode.Video,
-                Stretch = StretchMode.Uniform
-            },
+            OutputOptions = outputOptions,
             VideoEncoderOptions = new VideoEncoderOptions
             {
-                Framerate = frameRate,
+                Framerate = request.FrameRate,
                 IsFixedFramerate = true,
                 Quality = 94,
-                Bitrate = frameRate >= 60 ? 42_000_000 : 28_000_000,
+                Bitrate = request.FrameRate >= 60 ? 42_000_000 : 28_000_000,
                 IsHardwareEncodingEnabled = true,
                 IsLowLatencyEnabled = false,
                 IsThrottlingDisabled = false,
@@ -71,18 +125,15 @@ public sealed class RecordingService : IDisposable
             },
             MouseOptions = new MouseOptions
             {
-                IsMousePointerEnabled = showCursor,
-                IsMouseClicksDetected = highlightClicks,
+                IsMousePointerEnabled = request.ShowCursor,
+                IsMouseClicksDetected = request.HighlightClicks,
                 MouseClickDetectionMode = MouseDetectionMode.Polling,
                 MouseLeftClickDetectionColor = "#22B7FF",
                 MouseRightClickDetectionColor = "#126CFF",
                 MouseClickDetectionRadius = 18,
                 MouseClickDetectionDuration = 180
             },
-            AudioOptions = new AudioOptions
-            {
-                IsAudioEnabled = false
-            },
+            AudioOptions = audioOptions,
             LogOptions = new LogOptions
             {
                 IsLogEnabled = true,
@@ -98,7 +149,106 @@ public sealed class RecordingService : IDisposable
         _recorder.OnRecordingComplete += Recorder_OnRecordingComplete;
         _recorder.OnRecordingFailed += Recorder_OnRecordingFailed;
         _recorder.OnStatusChanged += Recorder_OnStatusChanged;
-        _recorder.Record(outputFile);
+        _recorder.Record(request.OutputFile);
+    }
+
+    private static RecordingSourceBase CreateVideoSource(RecordingRequest request)
+    {
+        if (request.CaptureMode == CaptureMode.Window)
+        {
+            if (request.WindowHandle == IntPtr.Zero)
+                throw new InvalidOperationException("กรุณาเลือกหน้าต่างโปรแกรมที่ต้องการบันทึก");
+
+            return new WindowRecordingSource(request.WindowHandle)
+            {
+                IsCursorCaptureEnabled = request.ShowCursor,
+                IsBorderRequired = false,
+                Stretch = StretchMode.None
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(request.DisplayDeviceName))
+            throw new InvalidOperationException("กรุณาเลือกหน้าจอที่ต้องการบันทึก");
+
+        var source = new DisplayRecordingSource(request.DisplayDeviceName)
+        {
+            RecorderApi = RecorderApi.WindowsGraphicsCapture,
+            IsBorderRequired = false,
+            IsCursorCaptureEnabled = request.ShowCursor,
+            Stretch = StretchMode.None
+        };
+
+        if (request.CaptureMode == CaptureMode.Region)
+        {
+            var region = request.Region;
+            if (region is null || !region.IsValid)
+                throw new InvalidOperationException("กรุณาเลือกพื้นที่หน้าจอที่ต้องการบันทึก");
+
+            var width = MakeEven(region.Width);
+            var height = MakeEven(region.Height);
+            source.SourceRect = new ScreenRect(region.X, region.Y, width, height);
+            source.OutputSize = new ScreenSize(width, height);
+        }
+
+        return source;
+    }
+
+    private static OutputOptions CreateOutputOptions(RecordingRequest request)
+    {
+        var output = new OutputOptions
+        {
+            RecorderMode = RecorderMode.Video,
+            Stretch = StretchMode.None
+        };
+
+        if (request.CaptureMode == CaptureMode.Region && request.Region is { IsValid: true } region)
+        {
+            var width = MakeEven(region.Width);
+            var height = MakeEven(region.Height);
+            output.SourceRect = new ScreenRect(0, 0, width, height);
+            output.OutputFrameSize = new ScreenSize(width, height);
+        }
+
+        return output;
+    }
+
+    private static AudioOptions CreateAudioOptions(RecordingRequest request)
+    {
+        var sources = new List<AudioSourceBase>();
+
+        if (request.RecordMicrophone && !string.IsNullOrWhiteSpace(request.MicrophoneDeviceName))
+        {
+            sources.Add(new CaptureAudioSource(request.MicrophoneDeviceName)
+            {
+                Volume = ClampVolume(request.MicrophoneVolume),
+                ForceMono = false
+            });
+        }
+
+        if (request.RecordSystemAudio && !string.IsNullOrWhiteSpace(request.SystemAudioDeviceName))
+        {
+            sources.Add(new LoopbackAudioSource(request.SystemAudioDeviceName)
+            {
+                Volume = ClampVolume(request.SystemAudioVolume)
+            });
+        }
+
+        return new AudioOptions
+        {
+            IsAudioEnabled = sources.Count > 0,
+            Bitrate = AudioBitrate.bitrate_192kbps,
+            Channels = AudioChannels.Stereo,
+            AudioSources = sources
+        };
+    }
+
+    private static float ClampVolume(int value)
+        => Math.Clamp(value, 0, 100) / 100f;
+
+    private static int MakeEven(int value)
+    {
+        value = Math.Max(32, value);
+        return value % 2 == 0 ? value : value - 1;
     }
 
     public void Stop()
