@@ -10,6 +10,7 @@ using CpiScreenRecorder.Models;
 using CpiScreenRecorder.Services;
 using Microsoft.Win32;
 using ScreenRecorderLib;
+using RecorderCaptureMode = CpiScreenRecorder.Models.CaptureMode;
 
 namespace CpiScreenRecorder;
 
@@ -72,26 +73,26 @@ public partial class MainWindow : Window
         SetStatus("พร้อมบันทึก", "#38D996");
     }
 
-    private CaptureMode SelectedCaptureMode
+    private RecorderCaptureMode SelectedCaptureMode
     {
         get
         {
             if (ModeWindowRadio.IsChecked == true)
-                return CaptureMode.Window;
+                return RecorderCaptureMode.Window;
             if (ModeRegionRadio.IsChecked == true)
-                return CaptureMode.Region;
-            return CaptureMode.Display;
+                return RecorderCaptureMode.Region;
+            return RecorderCaptureMode.Display;
         }
     }
 
-    private void SelectCaptureMode(CaptureMode mode)
+    private void SelectCaptureMode(RecorderCaptureMode mode)
     {
         switch (mode)
         {
-            case CaptureMode.Window:
+            case RecorderCaptureMode.Window:
                 ModeWindowRadio.IsChecked = true;
                 break;
-            case CaptureMode.Region:
+            case RecorderCaptureMode.Region:
                 ModeRegionRadio.IsChecked = true;
                 break;
             default:
@@ -113,15 +114,15 @@ public partial class MainWindow : Window
     {
         var mode = SelectedCaptureMode;
 
-        DisplayCard.Visibility = mode == CaptureMode.Window
+        DisplayCard.Visibility = mode == RecorderCaptureMode.Window
             ? Visibility.Collapsed
             : Visibility.Visible;
 
-        WindowCard.Visibility = mode == CaptureMode.Window
+        WindowCard.Visibility = mode == RecorderCaptureMode.Window
             ? Visibility.Visible
             : Visibility.Collapsed;
 
-        RegionControls.Visibility = mode == CaptureMode.Region
+        RegionControls.Visibility = mode == RecorderCaptureMode.Region
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
@@ -328,7 +329,7 @@ public partial class MainWindow : Window
         if (_loading)
             return;
 
-        if (SelectedCaptureMode == CaptureMode.Region)
+        if (SelectedCaptureMode == RecorderCaptureMode.Region)
         {
             _selectedRegion = CaptureRegion.Empty;
             UpdateRegionLabel();
@@ -392,19 +393,19 @@ public partial class MainWindow : Window
         AudioDeviceOption? microphone = MicrophoneCombo.SelectedItem as AudioDeviceOption;
         AudioDeviceOption? systemAudio = SystemAudioCombo.SelectedItem as AudioDeviceOption;
 
-        if (mode is CaptureMode.Display or CaptureMode.Region && display is null)
+        if (mode is RecorderCaptureMode.Display or RecorderCaptureMode.Region && display is null)
         {
             ShowValidation("กรุณาเลือก Monitor ที่ต้องการบันทึก");
             return;
         }
 
-        if (mode == CaptureMode.Window && window is null)
+        if (mode == RecorderCaptureMode.Window && window is null)
         {
             ShowValidation("กรุณาเลือกหน้าต่างโปรแกรมที่ต้องการบันทึก");
             return;
         }
 
-        if (mode == CaptureMode.Region && !_selectedRegion.IsValid)
+        if (mode == RecorderCaptureMode.Region && !_selectedRegion.IsValid)
         {
             ShowValidation("กรุณากด “ลากกรอบเลือกพื้นที่” ก่อนเริ่มบันทึก");
             return;
@@ -440,7 +441,7 @@ public partial class MainWindow : Window
                 CaptureMode = mode,
                 DisplayDeviceName = display?.DeviceName,
                 WindowHandle = window?.Handle ?? IntPtr.Zero,
-                Region = mode == CaptureMode.Region ? _selectedRegion : null,
+                Region = mode == RecorderCaptureMode.Region ? _selectedRegion : null,
                 OutputFile = outputFile,
                 FrameRate = SelectedFrameRate(),
                 ShowCursor = CursorCheck.IsChecked == true,
@@ -606,9 +607,9 @@ public partial class MainWindow : Window
 
         var canStart = SelectedCaptureMode switch
         {
-            CaptureMode.Display => DisplayCombo.Items.Count > 0,
-            CaptureMode.Window => WindowCombo.Items.Count > 0,
-            CaptureMode.Region => DisplayCombo.Items.Count > 0 && _selectedRegion.IsValid,
+            RecorderCaptureMode.Display => DisplayCombo.Items.Count > 0,
+            RecorderCaptureMode.Window => WindowCombo.Items.Count > 0,
+            RecorderCaptureMode.Region => DisplayCombo.Items.Count > 0 && _selectedRegion.IsValid,
             _ => false
         };
 
