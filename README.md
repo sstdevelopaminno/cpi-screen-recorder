@@ -1,26 +1,37 @@
 # CPI Screen Recorder
 
-**CPI Screen Recorder** is a focused Windows screen-recording utility for CUTTING POINT INNOVATION CO., LTD. It is intended for CpiPOS product reviews, customer manuals, training videos, and feature walkthroughs.
+**CPI Screen Recorder** is a Windows screen-recording utility for CUTTING POINT INNOVATION CO., LTD. It is designed for CpiPOS product reviews, customer manuals, training videos, and feature walkthroughs.
 
-## v0.1 goals
+## v0.2
 
 - Modern company-themed desktop UI
-- Select a monitor and record at its native resolution
+- Three capture modes:
+  - full monitor
+  - application window
+  - drag-to-select screen region
+- Multi-monitor selection with monitor name and resolution
 - MP4 / H.264 High profile
 - 30 or 60 FPS
+- Native-resolution capture and high-fidelity SDR-oriented settings
 - Cursor capture and optional click highlight
-- High-fidelity SDR-oriented capture settings for UI/tutorial recording
-- Local-only files — no upload or cloud dependency
+- Microphone recording from built-in or external Windows input devices
+- System-audio recording from the selected Windows playback device
+- Microphone + system audio can be mixed into the same MP4
+- Independent microphone and system-audio volume controls
+- User-selectable output folder
+- Recording timer and status
+- Open latest file / reveal in Explorer
+- Local-only settings
 - Self-contained Windows x64 installer built by GitHub Actions
 
 ## Build
 
-The repository includes a Windows GitHub Actions workflow. Every push to `main` that changes the application, installer, or workflow triggers a build.
+Every push to `main` that changes the application, installer, or workflow triggers a Windows build.
 
 Artifacts:
 
-- `CPI-Screen-Recorder-v0.1-portable`
-- `CPI-Screen-Recorder-v0.1-Setup`
+- `CPI-Screen-Recorder-v0.2-portable`
+- `CPI-Screen-Recorder-v0.2-Setup`
 
 The installer artifact contains `CPI-Screen-Recorder-Setup.exe`.
 
@@ -32,17 +43,25 @@ Requirements:
 - .NET 8 SDK (development only)
 
 ```powershell
-dotnet restore .\src\CpiScreenRecorder\CpiScreenRecorder.csproj
-dotnet run --project .\src\CpiScreenRecorder\CpiScreenRecorder.csproj
+dotnet restore .\src\CpiScreenRecorder\CpiScreenRecorder.csproj -p:Platform=x64
+dotnet run --project .\src\CpiScreenRecorder\CpiScreenRecorder.csproj -p:Platform=x64
 ```
 
-## Color fidelity note
+## Capture notes
 
-v0.1 records the selected monitor at native resolution using a standard SDR desktop capture path and high-quality H.264 settings. For product-review footage where UI color matching is critical, record with Windows HDR disabled on the selected display. HDR-to-SDR conversion can change brightness and saturation regardless of the recording application.
+For product-review footage where UI color matching is critical, record with Windows HDR disabled on the selected display. HDR-to-SDR conversion can alter brightness and saturation independently of the recorder.
+
+Window capture records only the selected application window. Region capture lets the user drag a frame over a selected monitor and stores the selected pixel dimensions.
+
+## Audio notes
+
+Microphone devices are read from Windows capture devices, so built-in laptop microphones, USB microphones, headsets, audio interfaces, and other active input devices can be selected.
+
+System audio is captured from Windows loopback audio. Microphone and system audio may be enabled together and are mixed into the same video file.
 
 ## Data & privacy
 
-The app stores recordings only in the folder selected by the user. It does not upload recordings or require an online account.
+The app stores recordings only in the folder selected by the user. It does not upload recordings and does not require an online account.
 
 ## Third-party component
 
