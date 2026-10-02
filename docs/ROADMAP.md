@@ -1,36 +1,39 @@
 # CPI Screen Recorder Roadmap
 
-## v0.2 — current scope
+## Stable baseline — v0.2.2
+
+Branch: stable/v0.2.2
+
+This is the rollback point for the tested stable recorder before the v0.3 feature set.
+
+## v0.3 — current scope
 
 - Windows 10/11 x64 desktop application
-- Full-monitor capture with multi-monitor selection
-- Per-window application capture
-- Drag-to-select region capture
+- Full-monitor / application-window / region capture
+- Multi-monitor selection
 - MP4 / H.264 High profile
 - 30 FPS and 60 FPS
-- Native monitor resolution / selected-region resolution
-- Cursor capture
-- Optional click highlight for tutorial videos
-- Microphone input selection
-- System-audio loopback selection
-- Simultaneous microphone + system-audio recording
-- Independent microphone and system-audio volume controls
-- User-selectable output folder
-- Recording timer and status
-- Open latest file / reveal in Explorer
-- Local-only settings
-- Company-branded dark UI
-- Self-contained Windows build and installer through GitHub Actions
-
-## Still outside v0.2
-
-- Video editing
+- Cursor capture and click highlight
+- Microphone + system audio
+- Real-time microphone level meter
+- Pause / Resume
+- Global F8 start/stop hotkey
+- Global F9 pause/resume hotkey
 - Webcam overlay
-- Cloud upload
-- Live streaming
-- AI editing
-- Multiple monitors merged into one canvas
-- Separate audio tracks per source
-- Noise suppression / compressor / limiter
+- Webcam corner and size controls
+- Responsive company UI
+- Self-contained Windows installer
 
-These can be evaluated after v0.2 has been tested on the production Windows PC used for CpiPOS tutorials.
+## Later
+
+- Webcam live preview inside the settings panel
+- Configurable hotkey editor
+- Noise suppression / compressor / limiter
+- Separate audio tracks
+- Multiple monitors merged into one canvas
+- Streaming
+- Cloud upload
+
+## Separate future project
+
+Video editing will not be added to this repository. A separate GitHub repository will be created for CPI Video Editor after the recorder v0.3 line is stable.
