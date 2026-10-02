@@ -8,13 +8,13 @@ namespace CpiScreenRecorder;
 
 public partial class RegionSelectionWindow : Window
 {
-    private readonly System.Windows.Forms.Screen _screen;
+    private readonly MonitorBounds _screen;
     private Point _start;
     private bool _dragging;
 
     public CaptureRegion SelectedRegion { get; private set; } = CaptureRegion.Empty;
 
-    public RegionSelectionWindow(System.Windows.Forms.Screen screen)
+    public RegionSelectionWindow(MonitorBounds screen)
     {
         InitializeComponent();
         _screen = screen;
@@ -23,15 +23,13 @@ public partial class RegionSelectionWindow : Window
     private void Window_SourceInitialized(object? sender, EventArgs e)
     {
         var handle = new WindowInteropHelper(this).Handle;
-        var bounds = _screen.Bounds;
-
         SetWindowPos(
             handle,
             IntPtr.Zero,
-            bounds.Left,
-            bounds.Top,
-            bounds.Width,
-            bounds.Height,
+            _screen.Left,
+            _screen.Top,
+            _screen.Width,
+            _screen.Height,
             SwpNoZOrder | SwpShowWindow);
 
         Activate();
@@ -99,16 +97,16 @@ public partial class RegionSelectionWindow : Window
         var widthDip = SelectionBorder.Width;
         var heightDip = SelectionBorder.Height;
 
-        var scaleX = _screen.Bounds.Width / SelectionCanvas.ActualWidth;
-        var scaleY = _screen.Bounds.Height / SelectionCanvas.ActualHeight;
+        var scaleX = _screen.Width / SelectionCanvas.ActualWidth;
+        var scaleY = _screen.Height / SelectionCanvas.ActualHeight;
 
         var x = Math.Max(0, (int)Math.Round(leftDip * scaleX));
         var y = Math.Max(0, (int)Math.Round(topDip * scaleY));
         var width = Math.Min(
-            _screen.Bounds.Width - x,
+            _screen.Width - x,
             Math.Max(0, (int)Math.Round(widthDip * scaleX)));
         var height = Math.Min(
-            _screen.Bounds.Height - y,
+            _screen.Height - y,
             Math.Max(0, (int)Math.Round(heightDip * scaleY)));
 
         width = MakeEven(width);
