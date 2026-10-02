@@ -882,7 +882,8 @@
                                                 <ComboBox x:Name="MicrophoneCombo"
                                                           Grid.Column="0"
                                                           Style="{StaticResource FieldCombo}"
-                                                          DisplayMemberPath="Label"/>
+                                                          DisplayMemberPath="Label"
+                                                          SelectionChanged="MicrophoneCombo_SelectionChanged"/>
 
                                                 <StackPanel Grid.Column="2"
                                                             VerticalAlignment="Center">
