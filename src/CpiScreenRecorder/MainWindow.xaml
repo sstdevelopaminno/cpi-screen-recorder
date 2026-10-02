@@ -898,6 +898,38 @@
                                                             ValueChanged="MicrophoneVolumeSlider_ValueChanged"/>
                                                 </StackPanel>
                                             </Grid>
+
+                                            <Grid Margin="0,10,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="10"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="10"/>
+                                                    <ColumnDefinition Width="42"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="MIC"
+                                                           Foreground="#6F87A6"
+                                                           FontSize="9"
+                                                           FontWeight="Bold"
+                                                           VerticalAlignment="Center"/>
+                                                <ProgressBar x:Name="MicrophoneLevelMeter"
+                                                             Grid.Column="2"
+                                                             Height="8"
+                                                             Minimum="0"
+                                                             Maximum="100"
+                                                             Value="0"
+                                                             Foreground="#2CC7F5"
+                                                             Background="#12243A"
+                                                             BorderThickness="0"
+                                                             VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="MicrophoneLevelText"
+                                                           Grid.Column="4"
+                                                           Text="0%"
+                                                           Foreground="#9DB2CC"
+                                                           FontSize="9"
+                                                           HorizontalAlignment="Right"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
                                         </StackPanel>
                                     </Border>
 
@@ -945,6 +977,85 @@
                                 </StackPanel>
                             </Border>
 
+                            <Border x:Name="WebcamPanel"
+                                    Style="{StaticResource PanelCard}"
+                                    Margin="0,12,0,0">
+                                <StackPanel>
+                                    <DockPanel LastChildFill="True">
+                                        <StackPanel>
+                                            <TextBlock Text="Webcam Overlay"
+                                                       Foreground="#EEF5FF"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="12"/>
+                                            <TextBlock Text="วางภาพกล้องบนมุมวิดีโอ สำหรับคลิปสอนและรีวิวระบบ"
+                                                       Foreground="#6F87A6"
+                                                       FontSize="9.5"
+                                                       Margin="0,3,0,0"/>
+                                        </StackPanel>
+                                        <Button DockPanel.Dock="Right"
+                                                Style="{StaticResource SecondaryButton}"
+                                                Height="30"
+                                                Padding="10,0"
+                                                Content="รีเฟรชกล้อง"
+                                                Click="RefreshCameras_Click"/>
+                                    </DockPanel>
+
+                                    <CheckBox x:Name="WebcamCheck"
+                                              Style="{StaticResource ToggleCheck}"
+                                              Margin="0,12,0,0"
+                                              Content="เปิด Webcam Overlay"
+                                              Checked="WebcamOption_Changed"
+                                              Unchecked="WebcamOption_Changed"/>
+
+                                    <Grid x:Name="WebcamControls" Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="10"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="10"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="กล้อง"
+                                                       Foreground="#9EB2CB"
+                                                       FontSize="9.5"
+                                                       Margin="2,0,0,5"/>
+                                            <ComboBox x:Name="CameraCombo"
+                                                      Style="{StaticResource FieldCombo}"
+                                                      DisplayMemberPath="Label"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="ตำแหน่ง"
+                                                       Foreground="#9EB2CB"
+                                                       FontSize="9.5"
+                                                       Margin="2,0,0,5"/>
+                                            <ComboBox x:Name="WebcamPositionCombo"
+                                                      Style="{StaticResource FieldCombo}">
+                                                <ComboBoxItem Content="มุมขวาล่าง" Tag="BottomRight" IsSelected="True"/>
+                                                <ComboBoxItem Content="มุมซ้ายล่าง" Tag="BottomLeft"/>
+                                                <ComboBoxItem Content="มุมขวาบน" Tag="TopRight"/>
+                                                <ComboBoxItem Content="มุมซ้ายบน" Tag="TopLeft"/>
+                                            </ComboBox>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="4">
+                                            <TextBlock Text="ขนาด"
+                                                       Foreground="#9EB2CB"
+                                                       FontSize="9.5"
+                                                       Margin="2,0,0,5"/>
+                                            <ComboBox x:Name="WebcamSizeCombo"
+                                                      Style="{StaticResource FieldCombo}">
+                                                <ComboBoxItem Content="กลาง" Tag="Medium" IsSelected="True"/>
+                                                <ComboBoxItem Content="เล็ก" Tag="Small"/>
+                                                <ComboBoxItem Content="ใหญ่" Tag="Large"/>
+                                            </ComboBox>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
                             <Border x:Name="OutputPanel"
                                     Style="{StaticResource PanelCard}"
                                     Margin="0,12,0,8">
@@ -985,6 +1096,8 @@
                                 <ColumnDefinition Width="2*"/>
                                 <ColumnDefinition Width="10"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
                             <Button x:Name="StartButton"
@@ -995,6 +1108,7 @@
                                     FontWeight="Bold"
                                     FontSize="14"
                                     Click="StartRecording_Click"
+                                    ToolTip="F8 = เริ่ม / หยุดบันทึก"
                                     BorderThickness="0">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
@@ -1028,8 +1142,46 @@
                                 <TextBlock Text="เริ่มบันทึกหน้าจอ"/>
                             </Button>
 
-                            <Button x:Name="StopButton"
+                            <Button x:Name="PauseButton"
                                     Grid.Column="2"
+                                    Height="56"
+                                    Padding="14,0"
+                                    Foreground="#FFFFFF"
+                                    Background="#173451"
+                                    BorderBrush="#386D9C"
+                                    BorderThickness="1"
+                                    FontWeight="SemiBold"
+                                    FontSize="12"
+                                    Content="Ⅱ  พักชั่วคราว"
+                                    IsEnabled="False"
+                                    Click="PauseResume_Click"
+                                    ToolTip="F9 = พัก / ทำต่อ">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="Root"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="13">
+                                            <ContentPresenter HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Root" Property="Background" Value="#1D496F"/>
+                                            </Trigger>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter TargetName="Root" Property="Background" Value="#111D2B"/>
+                                                <Setter TargetName="Root" Property="BorderBrush" Value="#23354B"/>
+                                                <Setter Property="Foreground" Value="#6E829B"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+
+                            <Button x:Name="StopButton"
+                                    Grid.Column="4"
                                     Height="56"
                                     Padding="14,0"
                                     Foreground="#FFFFFF"
@@ -1040,7 +1192,8 @@
                                     FontSize="13"
                                     Content="■  หยุดบันทึก"
                                     IsEnabled="False"
-                                    Click="StopRecording_Click">
+                                    Click="StopRecording_Click"
+                                    ToolTip="F8 = เริ่ม / หยุดบันทึก">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
                                         <Border x:Name="Root"
