@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CpiScreenRecorder.Models;
+using System.IO;
 
 namespace CpiScreenRecorder.Services;
 
