@@ -1,0 +1,15 @@
+<Application x:Class="CpiScreenRecorder.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <FontFamily x:Key="AppFont">Segoe UI, Leelawadee UI</FontFamily>
+        <SolidColorBrush x:Key="BrandBlue" Color="#126CFF" />
+        <SolidColorBrush x:Key="BrandCyan" Color="#2CC7F5" />
+        <SolidColorBrush x:Key="TextPrimary" Color="#F7FAFF" />
+        <SolidColorBrush x:Key="TextSecondary" Color="#9DAEC7" />
+        <SolidColorBrush x:Key="PanelBrush" Color="#121C2C" />
+        <SolidColorBrush x:Key="PanelSoftBrush" Color="#172338" />
+        <SolidColorBrush x:Key="StrokeBrush" Color="#243653" />
+    </Application.Resources>
+</Application>
