@@ -28,6 +28,17 @@ public sealed class RecordingService : IDisposable
         }
     }
 
+    public bool IsPaused
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _recorder?.Status == RecorderStatus.Paused;
+            }
+        }
+    }
+
     public bool IsBusy
     {
         get
@@ -119,6 +130,17 @@ public sealed class RecordingService : IDisposable
             .ToList();
     }
 
+    public IReadOnlyList<CameraDeviceOption> GetCameras()
+    {
+        return Recorder.GetSystemVideoCaptureDevices()
+            .Where(c => !string.IsNullOrWhiteSpace(c.DeviceName))
+            .Select(c => new CameraDeviceOption(
+                c.FriendlyName ?? "Camera",
+                c.DeviceName))
+            .OrderBy(c => c.FriendlyName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
     public void Start(RecordingRequest request)
     {
         ReleaseIdleRecorder();
@@ -136,6 +158,7 @@ public sealed class RecordingService : IDisposable
         var videoSource = CreateAndValidateVideoSource(request);
         var outputOptions = CreateOutputOptions(request);
         var audioOptions = CreateAudioOptions(request);
+        var overlayOptions = CreateOverlayOptions(request);
 
         var options = new RecorderOptions
         {
@@ -177,6 +200,7 @@ public sealed class RecordingService : IDisposable
                 MouseClickDetectionDuration = 180
             },
             AudioOptions = audioOptions,
+            OverlayOptions = overlayOptions,
             LogOptions = new LogOptions
             {
                 IsLogEnabled = true,
@@ -434,6 +458,60 @@ public sealed class RecordingService : IDisposable
         };
     }
 
+    private static OverLayOptions CreateOverlayOptions(RecordingRequest request)
+    {
+        var overlays = new List<RecordingOverlayBase>();
+
+        if (!request.WebcamEnabled)
+            return new OverLayOptions { Overlays = overlays };
+
+        if (string.IsNullOrWhiteSpace(request.WebcamDeviceName))
+        {
+            throw new InvalidOperationException(
+                "เปิด Webcam Overlay ไว้ แต่ยังไม่ได้เลือกกล้อง");
+        }
+
+        var available = Recorder.GetSystemVideoCaptureDevices()
+            .Any(c => string.Equals(
+                c.DeviceName,
+                request.WebcamDeviceName,
+                StringComparison.OrdinalIgnoreCase));
+
+        if (!available)
+        {
+            throw new InvalidOperationException(
+                "ไม่พบ Webcam ที่เลือก กรุณากดรีเฟรชกล้องแล้วเลือกใหม่");
+        }
+
+        var (width, height) = request.WebcamSize switch
+        {
+            WebcamSizePreset.Small => (240, 135),
+            WebcamSizePreset.Large => (420, 236),
+            _ => (320, 180)
+        };
+
+        var anchor = request.WebcamPosition switch
+        {
+            WebcamPosition.TopLeft => Anchor.TopLeft,
+            WebcamPosition.TopRight => Anchor.TopRight,
+            WebcamPosition.BottomLeft => Anchor.BottomLeft,
+            _ => Anchor.BottomRight
+        };
+
+        overlays.Add(new VideoCaptureOverlay(request.WebcamDeviceName)
+        {
+            Size = new ScreenSize(width, height),
+            Offset = new ScreenSize(20, 20),
+            AnchorPoint = anchor,
+            Stretch = StretchMode.UniformToFill
+        });
+
+        return new OverLayOptions
+        {
+            Overlays = overlays
+        };
+    }
+
     private static float ClampVolume(int value)
         => Math.Clamp(value, 0, 100) / 100f;
 
@@ -441,6 +519,60 @@ public sealed class RecordingService : IDisposable
     {
         value = Math.Max(32, value);
         return value % 2 == 0 ? value : value - 1;
+    }
+
+    public bool Pause()
+    {
+        Recorder? recorder;
+
+        lock (_sync)
+        {
+            recorder = _recorder;
+
+            if (_isStopping
+                || recorder is null
+                || recorder.Status != RecorderStatus.Recording)
+            {
+                return false;
+            }
+        }
+
+        try
+        {
+            recorder.Pause();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public bool Resume()
+    {
+        Recorder? recorder;
+
+        lock (_sync)
+        {
+            recorder = _recorder;
+
+            if (_isStopping
+                || recorder is null
+                || recorder.Status != RecorderStatus.Paused)
+            {
+                return false;
+            }
+        }
+
+        try
+        {
+            recorder.Resume();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public async Task<bool> StopAsync(TimeSpan? timeout = null)
