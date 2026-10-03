@@ -129,6 +129,7 @@ public partial class MainWindow
                 OutputFile = outputFile,
                 FrameRate = SelectedFrameRate(),
                 QualityPreset = SelectedQualityPreset(),
+                ForceSoftwareEncoding = _settings.ForceSoftwareEncoding,
                 ShowCursor = CursorCheck.IsChecked == true,
                 HighlightClicks = ClickHighlightCheck.IsChecked == true,
 
@@ -360,6 +361,14 @@ public partial class MainWindow
             RestartMicrophoneMeter();
             SetRecordingUi(false);
             SetStatus("บันทึกไม่สำเร็จ", "#FF647A");
+
+            if (_recordingService.CompatibilityModeRequired
+                && !_settings.ForceSoftwareEncoding)
+            {
+                _settings.ForceSoftwareEncoding = true;
+                _settingsService.Save(_settings);
+            }
+
             MessageBox.Show(
                 this,
                 error,
