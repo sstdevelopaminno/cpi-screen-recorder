@@ -6,7 +6,7 @@
 
 stable/v0.2.2 points to the tested v0.2.2 Windows build and is kept as the rollback baseline.
 
-## v0.3.2 — smooth capture candidate
+## v0.3.3 — compatibility-first capture candidate
 
 - Full-monitor capture with multi-monitor selection
 - Application-window capture with Windows 10 stability fallback
@@ -26,6 +26,8 @@ stable/v0.2.2 points to the tested v0.2.2 Windows build and is kept as the rollb
 - User-selectable output folder
 - Responsive company-branded UI
 - Smooth/Balanced/High recording presets with 720p/900p/source-resolution targets
+- Smooth preset uses Software H.264 at 720p30 to avoid unstable GPU encoders
+- Hardware encoder failures persist Compatibility Mode across app restarts
 - Desktop Duplication for full-display and region capture to reduce frame starvation
 - Per-recording diagnostics text file beside each MP4
 - Self-contained Windows x64 installer built by GitHub Actions
@@ -35,10 +37,10 @@ stable/v0.2.2 points to the tested v0.2.2 Windows build and is kept as the rollb
 Every push to main that changes the application, installer, or workflow triggers a Windows build.
 
 Artifacts:
-- CPI-Screen-Recorder-v0.3.2-portable
-- CPI-Screen-Recorder-v0.3.2-Setup
+- CPI-Screen-Recorder-v0.3.3-portable
+- CPI-Screen-Recorder-v0.3.3-Setup
 
-The installer artifact contains CPI-Screen-Recorder-v0.3.2-Setup.exe.
+The installer artifact contains CPI-Screen-Recorder-v0.3.3-Setup.exe.
 
 ## Capture notes
 

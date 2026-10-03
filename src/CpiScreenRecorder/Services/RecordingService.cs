@@ -19,6 +19,17 @@ public sealed class RecordingService : IDisposable
     public event EventHandler<string>? RecordingFailed;
     public event EventHandler<RecorderStatus>? StatusChanged;
 
+    public bool CompatibilityModeRequired
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _forceSoftwareEncoding;
+            }
+        }
+    }
+
     public bool IsRecording
     {
         get
@@ -164,7 +175,7 @@ public sealed class RecordingService : IDisposable
             videoHeight,
             request.FrameRate,
             request.QualityPreset,
-            _forceSoftwareEncoding);
+            request.ForceSoftwareEncoding || _forceSoftwareEncoding);
 
         var outputOptions = CreateOutputOptions(request);
         ApplyPerformanceTarget(videoSource, outputOptions, performance);
@@ -289,7 +300,8 @@ public sealed class RecordingService : IDisposable
         // On Windows 10 we therefore capture the exact on-screen window rectangle
         // from Desktop Duplication. This avoids the 'No valid recording sources'
         // failure seen on the production test PC.
-        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+        if (request.QualityPreset != RecordingQualityPreset.Smooth
+            && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
         {
             var directWindow = new WindowRecordingSource(currentWindow)
             {
@@ -712,27 +724,78 @@ public sealed class RecordingService : IDisposable
             _recordingFinished?.TrySetResult(true);
         }
 
-        var detail = string.IsNullOrWhiteSpace(e.Error)
+        var rawDetail = string.IsNullOrWhiteSpace(e.Error)
             ? "ไม่สามารถบันทึกวิดีโอได้"
             : e.Error;
 
-        if (!_forceSoftwareEncoding && IsHardwareEncoderFailure(detail))
+        var hardwareFailure = IsHardwareEncoderFailure(rawDetail);
+        if (hardwareFailure)
         {
-            _forceSoftwareEncoding = true;
-            detail +=
-                "\n\nตรวจพบว่าไดรเวอร์ไม่รองรับ Hardware Encoder รอบถัดไปโปรแกรมจะใช้โหมด Compatibility อัตโนมัติ";
+            lock (_sync)
+            {
+                _forceSoftwareEncoding = true;
+            }
         }
 
-        AppendDiagnostics($"Status=Failed{Environment.NewLine}Error={detail.Replace(Environment.NewLine, " | ")}");
+        var failedFile = PreserveFailedRecording();
+        AppendDiagnostics(
+            $"Status=Failed{Environment.NewLine}" +
+            $"HardwareEncoderFailure={hardwareFailure}{Environment.NewLine}" +
+            $"Error={rawDetail.Replace(Environment.NewLine, " | ")}" +
+            (string.IsNullOrWhiteSpace(failedFile)
+                ? string.Empty
+                : $"{Environment.NewLine}PartialFile={failedFile}"));
+
+        var detail = hardwareFailure
+            ? "Hardware Encoder ของเครื่องนี้หยุดทำงานระหว่างบันทึก ทำให้ไฟล์ MP4 ปิดไม่สมบูรณ์\n\n" +
+              "โปรแกรมเปิด Compatibility Mode แบบถาวรแล้ว การบันทึกรอบถัดไปจะใช้ Software Encoder เพื่อหลีกเลี่ยงปัญหานี้"
+            : rawDetail;
+
+        if (!string.IsNullOrWhiteSpace(failedFile))
+        {
+            detail +=
+                $"\n\nไฟล์ที่ไม่สมบูรณ์ถูกเก็บไว้เพื่อวิเคราะห์:\n{Path.GetFileName(failedFile)}";
+        }
+
         RecordingFailed?.Invoke(this, detail);
     }
 
     private static bool IsHardwareEncoderFailure(string detail)
     {
         return detail.Contains("hardware encoding", StringComparison.OrdinalIgnoreCase)
+               || detail.Contains("0xc00d36b5", StringComparison.OrdinalIgnoreCase)
                || detail.Contains("0x80004005", StringComparison.OrdinalIgnoreCase)
                || detail.Contains("feature level is not supported", StringComparison.OrdinalIgnoreCase)
-               || detail.Contains("device interface", StringComparison.OrdinalIgnoreCase);
+               || detail.Contains("device interface", StringComparison.OrdinalIgnoreCase)
+               || detail.Contains("not accepting further input", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string? PreserveFailedRecording()
+    {
+        var source = _currentFile;
+        if (string.IsNullOrWhiteSpace(source) || !File.Exists(source))
+            return null;
+
+        try
+        {
+            var directory = Path.GetDirectoryName(source)!;
+            var baseName = Path.GetFileNameWithoutExtension(source);
+            var failedPath = Path.Combine(directory, $"{baseName}.partial");
+
+            if (File.Exists(failedPath))
+            {
+                failedPath = Path.Combine(
+                    directory,
+                    $"{baseName}_{DateTime.Now:HHmmss}.partial");
+            }
+
+            File.Move(source, failedPath);
+            return failedPath;
+        }
+        catch
+        {
+            return source;
+        }
     }
 
     private void WriteSessionDiagnostics(
@@ -760,6 +823,7 @@ public sealed class RecordingService : IDisposable
                     $"CaptureMode={request.CaptureMode}",
                     $"CaptureApi={captureApi}",
                     $"QualityPreset={request.QualityPreset}",
+                    $"PersistedCompatibilityMode={request.ForceSoftwareEncoding}",
                     $"Source={sourceWidth}x{sourceHeight}",
                     $"Output={performance.OutputWidth}x{performance.OutputHeight}",
                     $"RequestedFps={request.FrameRate}",

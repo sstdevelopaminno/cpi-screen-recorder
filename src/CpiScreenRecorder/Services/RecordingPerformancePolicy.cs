@@ -25,7 +25,11 @@ public static class RecordingPerformancePolicy
         width = Math.Max(32, width);
         height = Math.Max(32, height);
 
-        var frameRate = requestedFrameRate >= 60 ? 60 : 30;
+        // Smooth is the compatibility-first preset: 720p30 software encoding.
+        // This avoids unstable/low-end GPU Media Foundation encoders entirely.
+        var frameRate = preset == RecordingQualityPreset.Smooth
+            ? 30
+            : requestedFrameRate >= 60 ? 60 : 30;
         var (maxWidth, maxHeight) = preset switch
         {
             RecordingQualityPreset.Smooth => (1280, 720),
@@ -44,7 +48,10 @@ public static class RecordingPerformancePolicy
             _ => frameRate >= 60 ? 24_000_000 : 16_000_000
         };
 
-        if (forceSoftwareEncoding)
+        var useSoftwareEncoding =
+            forceSoftwareEncoding || preset == RecordingQualityPreset.Smooth;
+
+        if (useSoftwareEncoding)
         {
             // Compatibility mode prioritizes uninterrupted frame delivery over
             // maximum detail. Keep bitrate bounded so CPU-only encoding does not
@@ -58,9 +65,9 @@ public static class RecordingPerformancePolicy
             FrameRate: frameRate,
             Bitrate: bitrate,
             Quality: 72,
-            HardwareEncodingEnabled: !forceSoftwareEncoding,
+            HardwareEncodingEnabled: !useSoftwareEncoding,
             FixedFrameRate: true,
-            LowLatencyEnabled: true,
+            LowLatencyEnabled: false,
             ThrottlingDisabled: false,
             OutputWidth: outputWidth,
             OutputHeight: outputHeight);

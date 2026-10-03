@@ -19,6 +19,7 @@ public sealed class AppSettings
 
     public int FrameRate { get; set; } = 30;
     public RecordingQualityPreset QualityPreset { get; set; } = RecordingQualityPreset.Smooth;
+    public bool ForceSoftwareEncoding { get; set; }
     public bool ShowCursor { get; set; } = true;
     public bool HighlightClicks { get; set; } = true;
 

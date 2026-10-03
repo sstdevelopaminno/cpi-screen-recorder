@@ -11,7 +11,7 @@ public sealed class RecordingPerformancePolicyTests
     [InlineData(1920, 1080, 1280, 720, 5_000_000)]
     [InlineData(2560, 1440, 1280, 720, 5_000_000)]
     [InlineData(3840, 2160, 1280, 720, 5_000_000)]
-    public void SmoothPreset_CapsOutputAt720p(
+    public void SmoothPreset_UsesSoftware720p30(
         int width,
         int height,
         int expectedWidth,
@@ -21,16 +21,16 @@ public sealed class RecordingPerformancePolicyTests
         var profile = RecordingPerformancePolicy.Create(
             width,
             height,
-            30,
+            60,
             RecordingQualityPreset.Smooth);
 
         Assert.Equal(expectedWidth, profile.OutputWidth);
         Assert.Equal(expectedHeight, profile.OutputHeight);
         Assert.Equal(expectedBitrate, profile.Bitrate);
         Assert.Equal(30, profile.FrameRate);
-        Assert.True(profile.HardwareEncodingEnabled);
+        Assert.False(profile.HardwareEncodingEnabled);
         Assert.True(profile.FixedFrameRate);
-        Assert.True(profile.LowLatencyEnabled);
+        Assert.False(profile.LowLatencyEnabled);
         Assert.False(profile.ThrottlingDisabled);
         Assert.Equal(72, profile.Quality);
     }
@@ -47,6 +47,8 @@ public sealed class RecordingPerformancePolicyTests
         Assert.Equal(1600, profile.OutputWidth);
         Assert.Equal(900, profile.OutputHeight);
         Assert.Equal(7_000_000, profile.Bitrate);
+        Assert.True(profile.HardwareEncodingEnabled);
+        Assert.False(profile.LowLatencyEnabled);
     }
 
     [Fact]
@@ -61,6 +63,7 @@ public sealed class RecordingPerformancePolicyTests
         Assert.Equal(1920, profile.OutputWidth);
         Assert.Equal(1080, profile.OutputHeight);
         Assert.Equal(10_000_000, profile.Bitrate);
+        Assert.True(profile.HardwareEncodingEnabled);
     }
 
     [Fact]
@@ -75,13 +78,14 @@ public sealed class RecordingPerformancePolicyTests
         Assert.Equal(1024, profile.OutputWidth);
         Assert.Equal(576, profile.OutputHeight);
         Assert.Equal(5_000_000, profile.Bitrate);
+        Assert.False(profile.HardwareEncodingEnabled);
     }
 
     [Theory]
-    [InlineData(1920, 1080, 30, RecordingQualityPreset.Smooth, 5_000_000)]
-    [InlineData(1920, 1080, 60, RecordingQualityPreset.Smooth, 8_000_000)]
+    [InlineData(1920, 1080, 30, RecordingQualityPreset.Balanced, 6_000_000)]
+    [InlineData(1920, 1080, 60, RecordingQualityPreset.Balanced, 8_000_000)]
     [InlineData(3840, 2160, 60, RecordingQualityPreset.High, 8_000_000)]
-    public void SoftwareFallback_CapsEncoderPressure(
+    public void PersistedCompatibilityMode_ForcesSoftwareEncoding(
         int width,
         int height,
         int fps,
@@ -97,17 +101,39 @@ public sealed class RecordingPerformancePolicyTests
 
         Assert.False(profile.HardwareEncodingEnabled);
         Assert.Equal(expectedBitrate, profile.Bitrate);
+        Assert.False(profile.LowLatencyEnabled);
     }
 
     [Fact]
-    public void Create_NormalizesUnsupportedFrameRates()
+    public void SmoothPreset_AlwaysNormalizesTo30Fps()
     {
         Assert.Equal(
             30,
-            RecordingPerformancePolicy.Create(1920, 1080, 24).FrameRate);
+            RecordingPerformancePolicy.Create(
+                1920,
+                1080,
+                120,
+                RecordingQualityPreset.Smooth).FrameRate);
+    }
+
+    [Fact]
+    public void BalancedAndHigh_CanUse60Fps()
+    {
         Assert.Equal(
             60,
-            RecordingPerformancePolicy.Create(1920, 1080, 120).FrameRate);
+            RecordingPerformancePolicy.Create(
+                1920,
+                1080,
+                120,
+                RecordingQualityPreset.Balanced).FrameRate);
+
+        Assert.Equal(
+            60,
+            RecordingPerformancePolicy.Create(
+                1920,
+                1080,
+                120,
+                RecordingQualityPreset.High).FrameRate);
     }
 
     [Fact]

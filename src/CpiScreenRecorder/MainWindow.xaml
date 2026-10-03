@@ -440,7 +440,7 @@
                                         <ComboBox x:Name="QualityPresetCombo"
                                                   Style="{StaticResource FieldCombo}"
                                                   Margin="0,10,0,0">
-                                            <ComboBoxItem Content="ลื่นไหล · สูงสุด 720p · แนะนำ"
+                                            <ComboBoxItem Content="ลื่นไหล · 720p Software · แนะนำ"
                                                           Tag="Smooth"
                                                           IsSelected="True"/>
                                             <ComboBoxItem Content="สมดุล · สูงสุด 900p"
