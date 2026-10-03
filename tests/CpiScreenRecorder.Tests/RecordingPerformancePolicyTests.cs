@@ -1,3 +1,4 @@
+using Xunit;
 using CpiScreenRecorder.Models;
 using CpiScreenRecorder.Services;
 
