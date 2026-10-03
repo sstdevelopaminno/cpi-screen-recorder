@@ -6,7 +6,7 @@ Branch: stable/v0.2.2
 
 This is the rollback point for the tested stable recorder before the v0.3 feature set.
 
-## v0.3.2 — current smooth-capture candidate
+## v0.3.3 — current compatibility-first candidate
 
 - Windows 10/11 x64 desktop application
 - Full-monitor / application-window / region capture
@@ -24,6 +24,8 @@ This is the rollback point for the tested stable recorder before the v0.3 featur
 - Responsive company UI
 - Adaptive hardware H.264 encoding with software compatibility fallback
 - Smooth/Balanced/High output profiles (720p / 900p / source resolution)
+- Smooth preset uses Software H.264 at 720p30
+- Persisted compatibility fallback after hardware encoder failure
 - Desktop Duplication for display and region capture
 - Per-session diagnostics file
 - Automated unit-test gate in GitHub Actions
