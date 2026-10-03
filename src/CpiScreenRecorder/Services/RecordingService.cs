@@ -13,6 +13,7 @@ public sealed class RecordingService : IDisposable
     private TaskCompletionSource<bool>? _recordingFinished;
     private bool _isStopping;
     private bool _forceSoftwareEncoding;
+    private string? _currentDiagnosticsFile;
 
     public event EventHandler<string>? RecordingCompleted;
     public event EventHandler<string>? RecordingFailed;
@@ -157,15 +158,25 @@ public sealed class RecordingService : IDisposable
         _currentFile = request.OutputFile;
 
         var videoSource = CreateAndValidateVideoSource(request);
-        var outputOptions = CreateOutputOptions(request);
-        var audioOptions = CreateAudioOptions(request);
-        var overlayOptions = CreateOverlayOptions(request);
         var (videoWidth, videoHeight) = GetVideoDimensions(videoSource);
         var performance = RecordingPerformancePolicy.Create(
             videoWidth,
             videoHeight,
             request.FrameRate,
+            request.QualityPreset,
             _forceSoftwareEncoding);
+
+        var outputOptions = CreateOutputOptions(request);
+        ApplyPerformanceTarget(videoSource, outputOptions, performance);
+
+        var audioOptions = CreateAudioOptions(request);
+        var overlayOptions = CreateOverlayOptions(request);
+        WriteSessionDiagnostics(
+            request,
+            videoSource,
+            videoWidth,
+            videoHeight,
+            performance);
 
         var options = new RecorderOptions
         {
@@ -398,9 +409,10 @@ public sealed class RecordingService : IDisposable
     }
 
     private static RecorderApi PreferredDisplayRecorderApi()
-        => OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000)
-            ? RecorderApi.WindowsGraphicsCapture
-            : RecorderApi.DesktopDuplication;
+        // Desktop Duplication is used for full-display and region capture on
+        // both Windows 10 and 11. The v0.3.1 sample showed multi-second frame
+        // starvation while the Windows Graphics Capture path was active.
+        => RecorderApi.DesktopDuplication;
 
     private static bool IsSourceUsable(RecordingSourceBase source)
     {
@@ -426,6 +438,22 @@ public sealed class RecordingService : IDisposable
         return (
             Math.Max(32, (int)Math.Round(dimensions.CombinedOutputSize.Width)),
             Math.Max(32, (int)Math.Round(dimensions.CombinedOutputSize.Height)));
+    }
+
+    private static void ApplyPerformanceTarget(
+        RecordingSourceBase source,
+        OutputOptions output,
+        RecordingPerformanceProfile performance)
+    {
+        var target = new ScreenSize(
+            performance.OutputWidth,
+            performance.OutputHeight);
+
+        source.OutputSize = target;
+        source.Stretch = StretchMode.Uniform;
+
+        output.OutputFrameSize = target;
+        output.Stretch = StretchMode.Uniform;
     }
 
     private static OutputOptions CreateOutputOptions(RecordingRequest request)
@@ -668,6 +696,7 @@ public sealed class RecordingService : IDisposable
             _recordingFinished?.TrySetResult(true);
         }
 
+        AppendDiagnostics("Status=Completed");
         RecordingCompleted?.Invoke(
             this,
             e.FilePath ?? _currentFile ?? string.Empty);
@@ -694,6 +723,7 @@ public sealed class RecordingService : IDisposable
                 "\n\nตรวจพบว่าไดรเวอร์ไม่รองรับ Hardware Encoder รอบถัดไปโปรแกรมจะใช้โหมด Compatibility อัตโนมัติ";
         }
 
+        AppendDiagnostics($"Status=Failed{Environment.NewLine}Error={detail.Replace(Environment.NewLine, " | ")}");
         RecordingFailed?.Invoke(this, detail);
     }
 
@@ -703,6 +733,68 @@ public sealed class RecordingService : IDisposable
                || detail.Contains("0x80004005", StringComparison.OrdinalIgnoreCase)
                || detail.Contains("feature level is not supported", StringComparison.OrdinalIgnoreCase)
                || detail.Contains("device interface", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void WriteSessionDiagnostics(
+        RecordingRequest request,
+        RecordingSourceBase source,
+        int sourceWidth,
+        int sourceHeight,
+        RecordingPerformanceProfile performance)
+    {
+        try
+        {
+            _currentDiagnosticsFile = Path.ChangeExtension(
+                request.OutputFile,
+                ".diagnostics.txt");
+
+            var captureApi = source is WindowRecordingSource
+                ? "WindowsGraphicsCapture"
+                : "DesktopDuplication";
+
+            File.WriteAllLines(
+                _currentDiagnosticsFile,
+                new[]
+                {
+                    $"StartedUtc={DateTime.UtcNow:O}",
+                    $"CaptureMode={request.CaptureMode}",
+                    $"CaptureApi={captureApi}",
+                    $"QualityPreset={request.QualityPreset}",
+                    $"Source={sourceWidth}x{sourceHeight}",
+                    $"Output={performance.OutputWidth}x{performance.OutputHeight}",
+                    $"RequestedFps={request.FrameRate}",
+                    $"EffectiveFps={performance.FrameRate}",
+                    $"Bitrate={performance.Bitrate}",
+                    $"HardwareEncoding={performance.HardwareEncodingEnabled}",
+                    $"LowLatency={performance.LowLatencyEnabled}",
+                    $"FixedFramerate={performance.FixedFrameRate}",
+                    $"AudioMic={request.RecordMicrophone}",
+                    $"AudioSystem={request.RecordSystemAudio}",
+                    $"Webcam={request.WebcamEnabled}"
+                });
+        }
+        catch
+        {
+            _currentDiagnosticsFile = null;
+        }
+    }
+
+    private void AppendDiagnostics(string text)
+    {
+        var path = _currentDiagnosticsFile;
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        try
+        {
+            File.AppendAllText(
+                path,
+                Environment.NewLine + $"CompletedUtc={DateTime.UtcNow:O}" +
+                Environment.NewLine + text + Environment.NewLine);
+        }
+        catch
+        {
+        }
     }
 
     private void Recorder_OnStatusChanged(
