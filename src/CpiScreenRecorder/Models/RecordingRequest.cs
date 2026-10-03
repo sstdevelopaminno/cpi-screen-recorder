@@ -13,6 +13,7 @@ public sealed class RecordingRequest
 
     public string OutputFile { get; init; } = string.Empty;
     public int FrameRate { get; init; } = 30;
+    public RecordingQualityPreset QualityPreset { get; init; } = RecordingQualityPreset.Smooth;
     public bool ShowCursor { get; init; } = true;
     public bool HighlightClicks { get; init; } = true;
 

@@ -58,6 +58,7 @@ public partial class MainWindow : Window
         CursorCheck.IsChecked = _settings.ShowCursor;
         ClickHighlightCheck.IsChecked = _settings.HighlightClicks;
         SelectFrameRate(_settings.FrameRate);
+        SelectQualityPreset(_settings.QualityPreset);
 
         MicrophoneCheck.IsChecked = _settings.RecordMicrophone;
         SystemAudioCheck.IsChecked = _settings.RecordSystemAudio;

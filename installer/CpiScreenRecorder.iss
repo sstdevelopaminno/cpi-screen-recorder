@@ -1,5 +1,5 @@
 #define MyAppName "CPI Screen Recorder"
-#define MyAppVersion "0.3.1"
+#define MyAppVersion "0.3.2"
 #define MyAppPublisher "CUTTING POINT INNOVATION CO., LTD."
 #define MyAppExeName "CPI.ScreenRecorder.exe"
 
@@ -13,7 +13,7 @@ DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=..\artifacts\installer
-OutputBaseFilename=CPI-Screen-Recorder-v0.3.1-Setup
+OutputBaseFilename=CPI-Screen-Recorder-v0.3.2-Setup
 SetupIconFile=..\src\CpiScreenRecorder\Resources\AppIcon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2

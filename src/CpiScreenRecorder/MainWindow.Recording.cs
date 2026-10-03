@@ -34,6 +34,31 @@ public partial class MainWindow
         return 30;
     }
 
+    private void SelectQualityPreset(RecordingQualityPreset preset)
+    {
+        foreach (var item in QualityPresetCombo.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(
+                    item.Tag?.ToString(),
+                    preset.ToString(),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                QualityPresetCombo.SelectedItem = item;
+                return;
+            }
+        }
+
+        QualityPresetCombo.SelectedIndex = 0;
+    }
+
+    private RecordingQualityPreset SelectedQualityPreset()
+    {
+        var tag = (QualityPresetCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+
+        return Enum.TryParse<RecordingQualityPreset>(tag, true, out var value)
+            ? value
+            : RecordingQualityPreset.Smooth;
+    }
 
     private void StartRecording_Click(object sender, RoutedEventArgs e)
     {
@@ -103,6 +128,7 @@ public partial class MainWindow
                 Region = mode == RecorderCaptureMode.Region ? _selectedRegion : null,
                 OutputFile = outputFile,
                 FrameRate = SelectedFrameRate(),
+                QualityPreset = SelectedQualityPreset(),
                 ShowCursor = CursorCheck.IsChecked == true,
                 HighlightClicks = ClickHighlightCheck.IsChecked == true,
 
@@ -161,6 +187,7 @@ public partial class MainWindow
         _settings.WindowTitle = window?.Title;
 
         _settings.FrameRate = SelectedFrameRate();
+        _settings.QualityPreset = SelectedQualityPreset();
         _settings.ShowCursor = CursorCheck.IsChecked == true;
         _settings.HighlightClicks = ClickHighlightCheck.IsChecked == true;
 

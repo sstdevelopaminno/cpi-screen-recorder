@@ -6,7 +6,7 @@ Branch: stable/v0.2.2
 
 This is the rollback point for the tested stable recorder before the v0.3 feature set.
 
-## v0.3.1 — current stability candidate
+## v0.3.2 — current smooth-capture candidate
 
 - Windows 10/11 x64 desktop application
 - Full-monitor / application-window / region capture
@@ -23,6 +23,9 @@ This is the rollback point for the tested stable recorder before the v0.3 featur
 - Webcam corner and size controls
 - Responsive company UI
 - Adaptive hardware H.264 encoding with software compatibility fallback
+- Smooth/Balanced/High output profiles (720p / 900p / source resolution)
+- Desktop Duplication for display and region capture
+- Per-session diagnostics file
 - Automated unit-test gate in GitHub Actions
 - Refactored MainWindow code-behind and shared UI theme resources
 - Self-contained Windows installer
