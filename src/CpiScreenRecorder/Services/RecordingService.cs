@@ -12,6 +12,7 @@ public sealed class RecordingService : IDisposable
     private string? _currentFile;
     private TaskCompletionSource<bool>? _recordingFinished;
     private bool _isStopping;
+    private bool _forceSoftwareEncoding;
 
     public event EventHandler<string>? RecordingCompleted;
     public event EventHandler<string>? RecordingFailed;
@@ -159,6 +160,12 @@ public sealed class RecordingService : IDisposable
         var outputOptions = CreateOutputOptions(request);
         var audioOptions = CreateAudioOptions(request);
         var overlayOptions = CreateOverlayOptions(request);
+        var (videoWidth, videoHeight) = GetVideoDimensions(videoSource);
+        var performance = RecordingPerformancePolicy.Create(
+            videoWidth,
+            videoHeight,
+            request.FrameRate,
+            _forceSoftwareEncoding);
 
         var options = new RecorderOptions
         {
@@ -169,24 +176,25 @@ public sealed class RecordingService : IDisposable
             OutputOptions = outputOptions,
             VideoEncoderOptions = new VideoEncoderOptions
             {
-                Framerate = request.FrameRate,
-                IsFixedFramerate = true,
-                Quality = 92,
-                Bitrate = request.FrameRate >= 60 ? 36_000_000 : 24_000_000,
+                Framerate = performance.FrameRate,
+                IsFixedFramerate = performance.FixedFrameRate,
+                Quality = performance.Quality,
+                Bitrate = performance.Bitrate,
 
-                // Software encoding is intentionally used in the stability build.
-                // It avoids GPU/driver encoder conflicts that can leave a capture
-                // session stuck while finalizing on some Windows 10 PCs.
-                IsHardwareEncodingEnabled = false,
+                // Hardware Media Foundation encoding removes the sustained CPU
+                // bottleneck that caused dropped/late frames on longer recordings.
+                // If a driver rejects the hardware encoder, the next recording
+                // automatically switches to the lower-pressure software profile.
+                IsHardwareEncodingEnabled = performance.HardwareEncodingEnabled,
 
-                IsLowLatencyEnabled = false,
-                IsThrottlingDisabled = false,
+                IsLowLatencyEnabled = performance.LowLatencyEnabled,
+                IsThrottlingDisabled = performance.ThrottlingDisabled,
                 IsMp4FastStartEnabled = true,
                 IsFragmentedMp4Enabled = false,
                 Encoder = new H264VideoEncoder
                 {
                     EncoderProfile = H264Profile.High,
-                    BitrateMode = H264BitrateControlMode.Quality
+                    BitrateMode = H264BitrateControlMode.UnconstrainedVBR
                 }
             },
             MouseOptions = new MouseOptions
@@ -359,7 +367,7 @@ public sealed class RecordingService : IDisposable
 
         return new DisplayRecordingSource(request.DisplayDeviceName)
         {
-            RecorderApi = RecorderApi.DesktopDuplication,
+            RecorderApi = PreferredDisplayRecorderApi(),
             IsBorderRequired = false,
             IsCursorCaptureEnabled = request.ShowCursor,
             Stretch = StretchMode.None
@@ -380,7 +388,7 @@ public sealed class RecordingService : IDisposable
 
         return new DisplayRecordingSource(request.DisplayDeviceName)
         {
-            RecorderApi = RecorderApi.DesktopDuplication,
+            RecorderApi = PreferredDisplayRecorderApi(),
             IsBorderRequired = false,
             IsCursorCaptureEnabled = request.ShowCursor,
             Stretch = StretchMode.None,
@@ -388,6 +396,11 @@ public sealed class RecordingService : IDisposable
             OutputSize = new ScreenSize(width, height)
         };
     }
+
+    private static RecorderApi PreferredDisplayRecorderApi()
+        => OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000)
+            ? RecorderApi.WindowsGraphicsCapture
+            : RecorderApi.DesktopDuplication;
 
     private static bool IsSourceUsable(RecordingSourceBase source)
     {
@@ -403,6 +416,16 @@ public sealed class RecordingService : IDisposable
         {
             return false;
         }
+    }
+
+    private static (int Width, int Height) GetVideoDimensions(RecordingSourceBase source)
+    {
+        var dimensions = Recorder.GetOutputDimensionsForRecordingSources(
+            new[] { source });
+
+        return (
+            Math.Max(32, (int)Math.Round(dimensions.CombinedOutputSize.Width)),
+            Math.Max(32, (int)Math.Round(dimensions.CombinedOutputSize.Height)));
     }
 
     private static OutputOptions CreateOutputOptions(RecordingRequest request)
@@ -664,7 +687,22 @@ public sealed class RecordingService : IDisposable
             ? "ไม่สามารถบันทึกวิดีโอได้"
             : e.Error;
 
+        if (!_forceSoftwareEncoding && IsHardwareEncoderFailure(detail))
+        {
+            _forceSoftwareEncoding = true;
+            detail +=
+                "\n\nตรวจพบว่าไดรเวอร์ไม่รองรับ Hardware Encoder รอบถัดไปโปรแกรมจะใช้โหมด Compatibility อัตโนมัติ";
+        }
+
         RecordingFailed?.Invoke(this, detail);
+    }
+
+    private static bool IsHardwareEncoderFailure(string detail)
+    {
+        return detail.Contains("hardware encoding", StringComparison.OrdinalIgnoreCase)
+               || detail.Contains("0x80004005", StringComparison.OrdinalIgnoreCase)
+               || detail.Contains("feature level is not supported", StringComparison.OrdinalIgnoreCase)
+               || detail.Contains("device interface", StringComparison.OrdinalIgnoreCase);
     }
 
     private void Recorder_OnStatusChanged(
