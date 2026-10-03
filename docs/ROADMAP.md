@@ -6,7 +6,7 @@ Branch: stable/v0.2.2
 
 This is the rollback point for the tested stable recorder before the v0.3 feature set.
 
-## v0.3 — current scope
+## v0.3.1 — current stability candidate
 
 - Windows 10/11 x64 desktop application
 - Full-monitor / application-window / region capture
@@ -15,13 +15,16 @@ This is the rollback point for the tested stable recorder before the v0.3 featur
 - 30 FPS and 60 FPS
 - Cursor capture and click highlight
 - Microphone + system audio
-- Real-time microphone level meter
+- Real-time microphone level meter (paused during active capture to reduce overhead)
 - Pause / Resume
 - Global F8 start/stop hotkey
 - Global F9 pause/resume hotkey
 - Webcam overlay
 - Webcam corner and size controls
 - Responsive company UI
+- Adaptive hardware H.264 encoding with software compatibility fallback
+- Automated unit-test gate in GitHub Actions
+- Refactored MainWindow code-behind and shared UI theme resources
 - Self-contained Windows installer
 
 ## Later

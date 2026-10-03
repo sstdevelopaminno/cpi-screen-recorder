@@ -6,7 +6,7 @@
 
 stable/v0.2.2 points to the tested v0.2.2 Windows build and is kept as the rollback baseline.
 
-## v0.3
+## v0.3.1 — stability candidate
 
 - Full-monitor capture with multi-monitor selection
 - Application-window capture with Windows 10 stability fallback
@@ -17,7 +17,7 @@ stable/v0.2.2 points to the tested v0.2.2 Windows build and is kept as the rollb
 - Microphone recording from built-in, USB, headset, or other Windows input devices
 - System-audio loopback recording
 - Microphone + system audio mixed into one MP4
-- Real-time microphone level meter before and during recording
+- Real-time microphone level meter before recording; monitoring pauses during active capture to reduce overhead
 - Pause / Resume recording without creating a new file
 - Global hotkeys: F8 start / stop, F9 pause / resume
 - Webcam overlay using a connected Windows camera
@@ -32,10 +32,10 @@ stable/v0.2.2 points to the tested v0.2.2 Windows build and is kept as the rollb
 Every push to main that changes the application, installer, or workflow triggers a Windows build.
 
 Artifacts:
-- CPI-Screen-Recorder-v0.3-portable
-- CPI-Screen-Recorder-v0.3-Setup
+- CPI-Screen-Recorder-v0.3.1-portable
+- CPI-Screen-Recorder-v0.3.1-Setup
 
-The installer artifact contains CPI-Screen-Recorder-Setup.exe.
+The installer artifact contains CPI-Screen-Recorder-v0.3.1-Setup.exe.
 
 ## Capture notes
 
